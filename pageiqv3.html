@@ -1,0 +1,2397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- ===================== -->
+<!-- HEAD / META           -->
+<!-- ===================== -->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PageIQ</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
+<meta name="theme-color" content="#0d0d0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PageIQ">
+
+<style>
+
+/* #region FOUNDATIONS */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:          #0d0d0c;
+  --surface:     #161614;
+  --card:        #232320;
+  --card-border: #3a3a36;
+  --card-top:    #484844;
+  --muted:       #2c2c29;
+  --line:        #2e2e2b;
+  --text:        #d8d5cf;
+  --text-dim:    #888880;
+  --text-faint:  #555550;
+  --text-bright: #f0ede7;
+  --teal:        #1D9E75;
+  --teal-dim:    #085041;
+  --teal-light:  #6ed4b0;
+  --amber:       #EF9F27;
+  --amber-dim:   #5e4210;
+  --red:         #E05A30;
+  --red-dim:     #5a2010;
+  --red-light:   #F09070;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-pill: 999px;
+}
+html { font-size: 16px; }
+body {
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+/* #endregion */
+
+/* #region THE STAGE */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 0.5px solid var(--line);
+  position: sticky; top: 0;
+  background: var(--bg);
+  z-index: 10;
+}
+.logo { font-size: 15px; font-weight: 700; color: var(--text-bright); letter-spacing: 0.03em; }
+.logo .iq { color: var(--teal); }
+.settings-btn {
+  font-size: 12px; color: var(--text-dim);
+  border: 0.5px solid var(--card-border); border-radius: var(--radius-sm);
+  padding: 5px 12px; background: var(--muted); cursor: pointer;
+  transition: background 0.12s;
+}
+.settings-btn:hover { background: var(--card); }
+.main { max-width: 720px; margin: 0 auto; padding: 0 20px 80px; }
+.section { margin-top: 20px; }
+.section-label {
+  font-size: 10px; font-weight: 600; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px;
+}
+.update-banner {
+  display: none;
+  background: var(--teal-dim); border-bottom: 0.5px solid var(--teal);
+  padding: 10px 20px; text-align: center; font-size: 12px; color: var(--teal-light);
+}
+.update-banner button {
+  margin-left: 12px; font-size: 12px;
+  border: 0.5px solid var(--teal); border-radius: 4px;
+  padding: 3px 10px; background: none; color: var(--teal-light); cursor: pointer;
+}
+/* #endregion */
+
+/* #region ONBOARDING / UPLOAD */
+body.onboarding-active .topbar,
+body.onboarding-active .main { display: none; }
+
+/* Splash screen */
+.onboard-splash {
+  position: fixed; inset: 0; z-index: 230;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.4s ease;
+}
+.onboard-splash.fade-out { opacity: 0; pointer-events: none; }
+.onboard-splash.gone { display: none; }
+.splash-logo {
+  font-size: 48px; font-weight: 700;
+  color: var(--text-bright); letter-spacing: 0.02em;
+  animation: splashPulse 3s ease-in-out infinite;
+}
+.splash-logo .iq { color: var(--teal); }
+
+.onboard-shell {
+  display: none;
+  position: fixed; inset: 0; z-index: 220;
+  background: var(--bg);
+  align-items: flex-start; justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+body.onboarding-active .onboard-shell { display: flex; }
+
+.onboard-card {
+  width: min(560px, 100%);
+  margin: auto;
+  padding: 32px 28px 28px;
+  border: 0.5px solid var(--card-border);
+  border-top-color: var(--card-top);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  position: relative;
+}
+.onboard-card.visible { opacity: 1; }
+
+.onboard-logo {
+  font-size: 42px; font-weight: 700;
+  color: var(--text-bright); letter-spacing: 0.02em;
+}
+.onboard-logo .iq { color: var(--teal); }
+
+/* Welcome state */
+.onboard-welcome {
+  opacity: 0; animation: fadeUp 0.45s 0.1s forwards;
+}
+.onboard-title {
+  font-size: 22px; font-weight: 600; color: var(--text-bright);
+  margin-top: 18px;
+}
+.onboard-sub {
+  font-size: 14px; color: var(--text-dim);
+  line-height: 1.7; max-width: 400px; margin: 10px auto 0;
+}
+.onboard-cta-row {
+  margin-top: 24px;
+  opacity: 0; animation: fadeUp 0.45s 0.28s forwards;
+}
+.onboard-upload-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 22px; font-size: 13px; font-weight: 500;
+  border-radius: var(--radius-pill);
+  border: 0.5px solid var(--teal);
+  background: var(--teal-dim); color: var(--teal-light);
+  cursor: pointer; transition: background 0.12s;
+}
+.onboard-upload-btn:hover { background: #0d6652; }
+
+/* Collapsed summary cards */
+.onboard-summary-card {
+  display: none;
+  text-align: left;
+  margin-top: 12px;
+  padding: 11px 14px;
+  border: 0.5px solid var(--line);
+  border-radius: var(--radius-md);
+  background: #111110;
+  animation: fadeUp 0.3s forwards;
+}
+.onboard-summary-card.show { display: flex; align-items: center; gap: 10px; }
+.onboard-summary-card-text { flex: 1; font-size: 12px; color: var(--text-faint); line-height: 1.5; }
+.onboard-summary-card-text strong { color: var(--text-dim); font-weight: 500; display: block; margin-bottom: 2px; }
+.onboard-summary-card-edit {
+  font-size: 11px; color: var(--teal-light);
+  background: none; border: none; cursor: pointer;
+  padding: 0; flex-shrink: 0; transition: opacity 0.12s;
+}
+.onboard-summary-card-edit:hover { opacity: 0.7; }
+
+/* Active panels */
+.onboard-panel {
+  display: none; text-align: left;
+  margin-top: 16px; padding-top: 20px;
+  border-top: 0.5px solid var(--line);
+  animation: fadeUp 0.3s forwards;
+}
+.onboard-panel.show { display: block; }
+.onboard-kicker { font-size: 12px; color: var(--text-faint); margin-bottom: 6px; }
+.onboard-panel h3 { font-size: 17px; color: var(--text-bright); font-weight: 500; margin-bottom: 8px; }
+.onboard-panel p { font-size: 13px; color: var(--text-dim); line-height: 1.7; margin-bottom: 14px; }
+
+.onboard-file-confirm {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  border: 0.5px solid var(--teal-dim); background: #0d2820;
+  border-radius: var(--radius-md); margin-bottom: 16px;
+}
+.onboard-file-icon { font-size: 18px; }
+.onboard-file-info { flex: 1; }
+.onboard-file-name { font-size: 13px; color: var(--teal-light); font-weight: 500; }
+.onboard-file-pages { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+.onboard-textarea {
+  width: 100%; min-height: 110px;
+  background: #111110; border: 0.5px solid var(--line);
+  border-radius: var(--radius-md); padding: 14px;
+  color: var(--text-bright); font: inherit; font-size: 13px;
+  line-height: 1.7; resize: vertical; outline: none;
+  transition: border-color 0.15s;
+}
+.onboard-textarea:focus { border-color: var(--text-faint); }
+.onboard-help { font-size: 12px; color: var(--text-faint); line-height: 1.6; margin-top: 8px; }
+
+.onboard-ref-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 12px 14px;
+  border: 0.5px solid var(--line); border-radius: var(--radius-md);
+  background: #111110; margin-top: 14px;
+}
+.onboard-ref-label { font-size: 13px; color: var(--text-dim); }
+.onboard-ref-name { font-size: 11px; color: var(--teal-light); margin-top: 3px; }
+.onboard-ref-btn {
+  font-size: 12px; padding: 6px 12px;
+  border: 0.5px solid var(--card-border); border-radius: var(--radius-sm);
+  background: var(--muted); color: var(--text); cursor: pointer;
+  white-space: nowrap; transition: background 0.12s; flex-shrink: 0;
+}
+.onboard-ref-btn:hover { background: var(--card); }
+
+.onboard-inline-actions {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  align-items: center; margin-top: 18px;
+}
+.onboard-primary {
+  flex: 1; padding: 11px 18px; font-size: 13px; font-weight: 500;
+  border-radius: var(--radius-pill);
+  border: 0.5px solid var(--teal);
+  background: var(--teal-dim); color: var(--teal-light);
+  cursor: pointer; transition: background 0.12s; text-align: center;
+}
+.onboard-primary:hover { background: #0d6652; }
+.onboard-back {
+  padding: 11px 14px; font-size: 12px;
+  border: 0.5px solid var(--line); border-radius: var(--radius-pill);
+  background: none; color: var(--text-dim); cursor: pointer;
+  transition: color 0.12s;
+}
+.onboard-back:hover { color: var(--text); }
+
+/* Clarification panel */
+.onboard-question {
+  background: #111110; border: 0.5px solid var(--line);
+  border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px;
+}
+.onboard-question p { font-size: 14px; color: var(--text-bright); margin-bottom: 10px; line-height: 1.6; }
+
+/* Alignment panel */
+.onboard-align-summary {
+  background: #111110; border: 0.5px solid var(--line);
+  border-radius: var(--radius-md); padding: 14px; margin: 14px 0;
+}
+.onboard-align-label { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+.onboard-align-summary ul { margin-left: 18px; color: var(--text); line-height: 1.9; font-size: 13px; }
+
+/* Gear icon in onboarding card */
+.onboard-gear {
+  position: absolute; top: 16px; right: 16px;
+  font-size: 15px; color: var(--text-faint);
+  background: none; border: none; cursor: pointer;
+  line-height: 1; padding: 4px;
+  transition: color 0.12s;
+}
+.onboard-gear:hover { color: var(--text-dim); }
+
+/* Model recommendation row */
+.onboard-model-row {
+  margin-top: 14px; padding: 12px 14px;
+  border: 0.5px solid var(--line); border-radius: var(--radius-md);
+  background: #111110;
+}
+.onboard-model-line {
+  font-size: 13px; color: var(--text-dim); line-height: 1.6;
+}
+.onboard-model-line strong { color: var(--text-bright); font-weight: 500; }
+.onboard-model-change {
+  font-size: 12px; color: var(--teal-light);
+  background: none; border: none; cursor: pointer;
+  padding: 0 0 0 6px; transition: opacity 0.12s;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.onboard-model-change:hover { opacity: 0.7; }
+.onboard-model-picker {
+  display: none; gap: 8px; margin-top: 12px;
+  padding-top: 12px; border-top: 0.5px solid var(--line);
+}
+.onboard-model-picker.open { display: flex; }
+.onboard-model-pill {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 3px; padding: 10px 8px;
+  background: var(--muted); border: 0.5px solid var(--card-border);
+  border-radius: var(--radius-md); cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.onboard-model-pill:hover { background: var(--card); }
+.onboard-model-pill.active { border-color: var(--teal); background: var(--teal-dim); }
+.onboard-model-pill strong { font-size: 12px; color: var(--text-bright); font-weight: 500; }
+.onboard-model-pill span { font-size: 10px; color: var(--text-faint); }
+.onboard-model-pill.active strong { color: var(--teal-light); }
+.onboard-model-pill.active span { color: var(--teal-light); opacity: 0.7; }
+
+/* Run summary strip */
+.run-summary {
+  padding: 12px 0 4px;
+  border-bottom: 0.5px solid var(--line);
+  margin-bottom: 20px;
+}
+.run-summary-row {
+  display: flex; align-items: center; gap: 0;
+  flex-wrap: wrap;
+}
+.run-summary-item {
+  flex: 1; min-width: 0; padding: 4px 12px;
+}
+.run-summary-item:first-child { padding-left: 0; }
+.run-summary-item-narrow { flex: 0 0 auto; }
+.run-summary-divider {
+  width: 0.5px; height: 28px; background: var(--line); flex-shrink: 0;
+}
+.run-summary-label {
+  font-size: 10px; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 2px;
+}
+.run-summary-value {
+  font-size: 12px; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.run-summary-gear {
+  font-size: 14px; color: var(--text-faint);
+  background: none; border: none; cursor: pointer;
+  padding: 4px 4px 4px 12px; transition: color 0.12s; flex-shrink: 0;
+}
+.run-summary-gear:hover { color: var(--text-dim); }
+
+/* Status / loading panel */
+.onboard-status { display: none; text-align: center; margin-top: 24px; }
+.onboard-status.show { display: block; }
+.onboard-status-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--teal);
+  animation: breathe 2.4s ease-in-out infinite;
+  margin-right: 8px; vertical-align: middle;
+}
+.onboard-status-line { font-size: 14px; color: var(--text-bright); line-height: 1.7; }
+.onboard-status-detail { font-size: 12px; color: var(--text-faint); margin-top: 10px; line-height: 1.6; }
+
+@keyframes splashPulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes breathe { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+/* #endregion */
+
+/* #region CONVERSATION PANELS (main app) */
+.card {
+  background: var(--surface);
+  border: 0.5px solid var(--card-border);
+  border-top-color: var(--card-top);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+textarea {
+  width: 100%; font-size: 13px; color: var(--text-bright);
+  border: 0.5px solid var(--line); border-radius: var(--radius-sm);
+  padding: 10px 12px; background: #111110;
+  resize: vertical; font-family: inherit; line-height: 1.7; outline: none;
+  transition: border-color 0.15s;
+}
+textarea:focus { border-color: var(--text-faint); }
+.main-prompt { min-height: 130px; }
+.sys-prompt { min-height: 80px; }
+.placeholder-hint { font-size: 11px; color: var(--text-faint); margin-top: 6px; line-height: 1.6; }
+
+.adv-toggle {
+  font-size: 11px; color: var(--text-dim); margin-top: 12px;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  border: none; background: none; padding: 0;
+}
+.adv-arr { font-size: 9px; color: var(--text-faint); display: inline-block; transition: transform 0.2s; }
+.adv-arr.open { transform: rotate(90deg); }
+.adv-box { margin-top: 10px; background: #111110; border: 0.5px solid var(--line); border-radius: var(--radius-sm); padding: 12px; display: none; }
+.adv-box.open { display: block; }
+.adv-hint { font-size: 11px; color: var(--text-faint); margin-bottom: 8px; line-height: 1.6; }
+
+.model-row {
+  display: flex; align-items: center; gap: 10px; margin-top: 12px;
+  background: #111110; border: 0.5px solid var(--line);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.model-label { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+select { font-size: 12px; border: none; background: #111110; color: var(--text-bright); flex: 1; outline: none; cursor: pointer; }
+
+.run-btn {
+  width: 100%; padding: 11px; font-size: 13px; font-weight: 500;
+  border-radius: var(--radius-sm); border: none;
+  background: var(--teal); color: #fff;
+  cursor: pointer; margin-top: 12px; letter-spacing: 0.02em;
+  transition: background 0.12s;
+}
+.run-btn:hover { background: #179e75; }
+.run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.run-btn.running { background: var(--teal-dim); color: var(--teal-light); border: 0.5px solid var(--teal); }
+
+.attach-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.attach-label { font-size: 12px; color: var(--text-dim); flex: 1; }
+.attach-name { font-size: 11px; color: var(--teal-light); margin-top: 4px; }
+.drop-zone {
+  border: 0.5px dashed #484844; border-radius: var(--radius-sm);
+  padding: 24px; text-align: center; background: #111110;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--teal); }
+.drop-zone p { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+.loaded { font-size: 11px; color: var(--teal-light); margin-top: 8px; }
+.btn-sm, .export-btn {
+  font-size: 12px; border: 0.5px solid var(--card-border);
+  border-radius: var(--radius-sm); padding: 6px 12px;
+  background: var(--muted); color: var(--text); cursor: pointer;
+  transition: background 0.12s;
+}
+.btn-sm:hover, .export-btn:hover { background: var(--card); }
+/* #endregion */
+
+/* #region ANALYSIS STATUS */
+.progress-card, .results-card, .memo-card {
+  background: var(--surface);
+  border: 0.5px solid var(--card-border);
+  border-top-color: var(--card-top);
+  border-radius: var(--radius-md); padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: none;
+}
+.progress-card.visible, .results-card.visible, .memo-card.visible { display: block; }
+
+.status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); flex-shrink: 0; }
+.dot.done { background: var(--text-faint); }
+.dot.error { background: var(--red); }
+.status-text { font-size: 13px; color: var(--text); }
+.status-meta { font-size: 11px; color: var(--text-faint); margin-left: auto; }
+.bar-wrap { background: var(--muted); border-radius: 99px; height: 3px; overflow: hidden; margin-bottom: 8px; }
+.bar { background: var(--teal); height: 100%; width: 0%; border-radius: 99px; transition: width 0.4s; }
+.bar-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-faint); }
+/* #endregion */
+
+/* #region FINDINGS TABLE */
+.results-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; gap: 10px; flex-wrap: wrap;
+}
+.results-title { font-size: 13px; font-weight: 500; color: var(--text-bright); }
+.divider { height: 0.5px; background: var(--line); margin: 12px 0; }
+.results-table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th {
+  text-align: left; padding: 6px 8px; font-size: 10px; font-weight: 600;
+  color: var(--text-faint); border-bottom: 0.5px solid var(--line);
+  text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;
+}
+td { padding: 7px 8px; border-bottom: 0.5px solid #1e1e1c; color: var(--text-dim); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+.badge {
+  display: inline-block; font-size: 10px; padding: 2px 7px;
+  border-radius: 4px; font-weight: 500; white-space: nowrap;
+}
+.b-high, .b-clear { background: var(--teal-dim); color: var(--teal-light); }
+.b-medium { background: var(--amber-dim); color: var(--amber); }
+.b-low, .b-flag { background: var(--red-dim); color: var(--red-light); }
+.b-none, .b-na { background: var(--muted); color: var(--text-dim); }
+
+.memo-text {
+  font-size: 13px; color: var(--text-dim); line-height: 1.9;
+  font-family: Georgia, serif;
+  border-left: 2px solid var(--line); padding-left: 14px;
+}
+.memo-note { font-size: 11px; color: var(--text-faint); margin-top: 10px; font-style: italic; }
+/* #endregion */
+
+/* #region REVIEW PANE */
+.review-pane {
+  position: fixed; top: 0; right: -100%;
+  width: min(560px, 100vw); height: 100vh;
+  background: #111110;
+  border-left: 0.5px solid var(--card-border);
+  z-index: 120; display: flex; flex-direction: column;
+  transition: right 0.25s ease;
+  box-shadow: -12px 0 40px rgba(0,0,0,0.5);
+}
+.review-pane.open { right: 0; }
+.review-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; border-bottom: 0.5px solid var(--line);
+  background: #161614;
+}
+.review-title { font-size: 14px; font-weight: 600; color: var(--text-bright); }
+.review-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; line-height: 1.5; }
+.review-close {
+  font-size: 12px; border: 0.5px solid var(--card-border);
+  border-radius: var(--radius-sm); padding: 6px 12px;
+  background: var(--muted); color: var(--text); cursor: pointer;
+  transition: background 0.12s; flex-shrink: 0;
+}
+.review-close:hover { background: var(--card); }
+
+.review-toolbar {
+  padding: 12px 18px; border-bottom: 0.5px solid var(--line);
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  background: #111110;
+}
+.review-pill {
+  font-size: 11px; padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 0.5px solid var(--card-border);
+  background: var(--surface); color: var(--text-dim);
+  cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.review-pill.active { background: #1a3028; border-color: var(--teal); color: var(--teal-light); }
+.review-pill.flagged.active { background: #2e2210; border-color: #7a5820; color: var(--amber); }
+.review-pill#autoAcceptBtn { color: var(--text-faint); }
+.review-pill#autoAcceptBtn:hover { color: var(--text); }
+
+.review-toolbar-meta {
+  width: 100%; display: flex; justify-content: space-between; gap: 10px;
+  font-size: 11px; color: var(--text-faint); line-height: 1.5; margin-top: 4px; flex-wrap: wrap;
+}
+.review-body {
+  flex: 1; overflow: auto; padding: 18px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.review-empty {
+  font-size: 12px; color: var(--text-faint); padding: 18px;
+  border: 0.5px dashed var(--line); border-radius: var(--radius-md);
+  background: #0f0f0e; line-height: 1.7;
+}
+/* #endregion */
+
+/* #region THE CARD */
+.review-stack { position: relative; min-height: 400px; display: flex; align-items: center; justify-content: center; }
+.review-peek {
+  position: absolute; inset: auto 14px 6px 14px; height: 88%;
+  background: #181816;
+  border: 0.5px solid var(--line);
+  border-radius: var(--radius-lg);
+  opacity: 0.5;
+  transform: translateY(10px) scale(0.984);
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+.swipe-shell { position: relative; width: 100%; }
+
+.review-card-active {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-top-color: var(--card-top);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 220px);
+}
+.review-card-head {
+  padding: 16px 16px 12px; border-bottom: 0.5px solid var(--line);
+  flex-shrink: 0;
+}
+.review-body-fields {
+  padding: 14px 16px 16px;
+  overflow-y: auto; flex: 1;
+}
+
+.review-card-finding { font-size: 14px; font-weight: 500; color: var(--text-bright); line-height: 1.5; }
+.review-card-meta { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.review-card-page { font-size: 11px; color: var(--text-faint); }
+
+.review-card-actions { display: flex; gap: 8px; margin-top: 12px; }
+.review-action {
+  padding: 9px 0; font-size: 13px; font-weight: 500;
+  border-radius: var(--radius-pill);
+  cursor: pointer; transition: background 0.12s, opacity 0.12s;
+  text-align: center; border: none;
+}
+.review-action.accept {
+  flex: 2; background: var(--teal); color: #fff;
+}
+.review-action.accept:hover { background: #179e75; }
+.review-action.reject {
+  flex: 1; background: transparent; color: var(--red-light);
+  border: 0.5px solid var(--red-dim);
+}
+.review-action.reject:hover { background: var(--red-dim); }
+.review-action.flag {
+  flex: 1; background: transparent; color: var(--text-dim);
+  border: 0.5px solid var(--card-border);
+}
+.review-action.flag:hover { background: var(--muted); }
+
+.review-field {
+  background: #1a1a18; border: 0.5px solid var(--line);
+  border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 10px;
+}
+.review-field-label { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+.review-field-value { font-size: 12px; color: var(--text-dim); line-height: 1.65; word-break: break-word; }
+.review-image-wrap {
+  display: flex; justify-content: center; align-items: center;
+  background: #1a1a18; border: 0.5px solid var(--line);
+  border-radius: var(--radius-sm); padding: 8px; cursor: pointer;
+  transition: border-color 0.15s; margin-bottom: 10px;
+}
+.review-image-wrap:hover { border-color: var(--card-border); }
+.review-image-wrap img { width: 100%; max-height: 190px; object-fit: contain; border-radius: 6px; display: block; }
+.review-image-note { font-size: 10px; color: var(--text-faint); margin-top: 6px; text-align: center; }
+.review-add-note {
+  font-size: 11px; color: var(--text-faint); border: none; background: none;
+  padding: 0; cursor: pointer; transition: color 0.12s;
+}
+.review-add-note:hover { color: var(--text-dim); }
+.review-note-box { display: none; }
+.review-note-box.open { display: block; }
+.review-notes {
+  width: 100%; margin-top: 8px; min-height: 72px; font-size: 12px;
+  color: var(--text-bright); border: 0.5px solid var(--card-border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  background: #111110; resize: vertical; font-family: inherit;
+  line-height: 1.6; outline: none;
+}
+.review-notes:focus { border-color: var(--text-faint); }
+
+.review-footer {
+  padding: 12px 18px; border-top: 0.5px solid var(--line);
+  background: #161614;
+  display: flex; justify-content: space-between; gap: 10px;
+  align-items: center; flex-wrap: wrap;
+}
+.review-footer-meta { font-size: 11px; color: var(--text-faint); line-height: 1.5; }
+.review-mini-btn {
+  font-size: 12px; border: 0.5px solid var(--card-border);
+  border-radius: var(--radius-sm); padding: 6px 12px;
+  background: var(--muted); color: var(--text-dim); cursor: pointer;
+  transition: background 0.12s;
+}
+.review-mini-btn:hover { background: var(--card); }
+/* #endregion */
+
+/* #region IMAGE PREVIEW OVERLAY */
+.preview-overlay {
+  display: none; position: fixed; inset: 0;
+  background: var(--bg); z-index: 160;
+  align-items: center; justify-content: center;
+}
+.preview-overlay.open { display: flex; }
+.preview-stage {
+  position: relative; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px; overflow: hidden;
+}
+.preview-stage img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.preview-meta {
+  position: absolute; top: 16px; left: 18px;
+  font-size: 11px; color: var(--text-dim);
+  background: rgba(13,13,12,0.8); padding: 6px 10px;
+  border-radius: var(--radius-pill); border: 0.5px solid var(--line);
+}
+.preview-hint {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; color: var(--text-faint);
+  background: rgba(13,13,12,0.8); padding: 6px 10px;
+  border-radius: var(--radius-pill); border: 0.5px solid var(--line);
+  white-space: nowrap;
+}
+/* #endregion */
+
+/* #region NUDGE (TOAST) */
+.review-toast {
+  position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%);
+  background: var(--card); border: 0.5px solid var(--card-border);
+  color: var(--text); padding: 9px 14px;
+  border-radius: var(--radius-pill); font-size: 12px;
+  z-index: 180; display: none; gap: 10px; align-items: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  white-space: nowrap;
+}
+.review-toast.show { display: flex; }
+.review-toast button { background: none; border: none; color: var(--teal-light); cursor: pointer; font-size: 12px; padding: 0; }
+/* #endregion */
+
+/* #region SETTINGS OVERLAY */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); z-index: 240;
+  align-items: center; justify-content: center;
+}
+.overlay.open { display: flex; }
+.settings-panel {
+  background: var(--surface);
+  border: 0.5px solid var(--card-border);
+  border-radius: var(--radius-md); padding: 24px;
+  width: 100%; max-width: 400px; margin: 20px;
+}
+.settings-panel h2 { font-size: 15px; font-weight: 500; color: var(--text-bright); margin-bottom: 4px; }
+.settings-panel p { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+.field-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; display: block; }
+.key-input {
+  width: 100%; font-size: 12px; color: var(--text-bright);
+  border: 0.5px solid var(--card-border); border-radius: var(--radius-sm);
+  padding: 10px 12px; background: #111110; outline: none; font-family: monospace;
+  transition: border-color 0.15s;
+}
+.key-input:focus { border-color: var(--text-faint); }
+.key-status { font-size: 11px; margin-top: 8px; }
+.key-status.set { color: var(--teal-light); }
+.key-status.unset { color: var(--red-light); }
+.settings-actions { display: flex; gap: 8px; margin-top: 16px; }
+.save-btn {
+  flex: 1; padding: 9px; font-size: 12px; font-weight: 500;
+  border-radius: var(--radius-sm); border: 0.5px solid var(--teal);
+  background: var(--teal-dim); color: var(--teal-light); cursor: pointer;
+  transition: background 0.12s;
+}
+.save-btn:hover { background: #0d6652; }
+.cancel-btn {
+  padding: 9px 16px; font-size: 12px;
+  border-radius: var(--radius-sm); border: 0.5px solid var(--card-border);
+  background: var(--muted); color: var(--text-dim); cursor: pointer;
+  transition: background 0.12s;
+}
+.cancel-btn:hover { background: var(--card); }
+/* #endregion */
+
+/* #region START OVER MODAL */
+.confirm-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8); z-index: 200;
+  align-items: center; justify-content: center;
+}
+.confirm-modal.open { display: flex; }
+.confirm-panel {
+  background: var(--surface);
+  border: 0.5px solid var(--card-border);
+  border-top-color: var(--card-top);
+  border-radius: var(--radius-md); padding: 24px;
+  width: 100%; max-width: 340px; margin: 20px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.confirm-panel h3 { font-size: 14px; font-weight: 500; color: var(--text-bright); margin-bottom: 8px; }
+.confirm-panel p { font-size: 12px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+.confirm-actions { display: flex; gap: 8px; }
+.confirm-destroy {
+  flex: 1; padding: 9px; font-size: 12px; font-weight: 500;
+  border-radius: var(--radius-sm); border: 0.5px solid #7a3222;
+  background: var(--red-dim); color: var(--red-light); cursor: pointer;
+  transition: background 0.12s;
+}
+.confirm-destroy:hover { background: #6a2818; }
+.confirm-cancel {
+  padding: 9px 16px; font-size: 12px;
+  border-radius: var(--radius-sm); border: 0.5px solid var(--card-border);
+  background: var(--muted); color: var(--text-dim); cursor: pointer;
+  transition: background 0.12s;
+}
+.confirm-cancel:hover { background: var(--card); }
+/* #endregion */
+
+/* #region DEV MODE */
+.helper-note { font-size: 11px; color: var(--text-faint); margin-top: 8px; line-height: 1.6; }
+/* #endregion */
+
+/* #region RESPONSIVE */
+@media (max-width: 560px) {
+  .review-toolbar-meta { flex-direction: column; }
+  .review-card-actions { width: 100%; }
+  .review-action { flex: 1; text-align: center; }
+}
+/* #endregion */
+
+</style>
+</head>
+<body>
+
+<!-- ===================== -->
+<!-- ONBOARDING EXPERIENCE -->
+<!-- ===================== -->
+
+<!-- Splash screen -->
+<div class="onboard-splash" id="onboardSplash">
+  <div class="splash-logo">Page<span class="iq">IQ</span></div>
+</div>
+
+<div class="onboard-shell" id="onboardShell">
+  <div class="onboard-card" id="onboardCard">
+    <div class="onboard-logo">Page<span class="iq">IQ</span></div>
+
+    <!-- Welcome state (before PDF) -->
+    <div class="onboard-welcome" id="onboardWelcome">
+      <div class="onboard-title">Let's take a look at your document.</div>
+      <div class="onboard-sub">Upload a PDF and I'll help you find what matters, page by page.</div>
+      <div class="onboard-cta-row">
+        <button class="onboard-upload-btn" onclick="document.getElementById('onboardPdfInput').click()">
+          ↑ Choose a PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsed summary: PDF -->
+    <div class="onboard-summary-card" id="summaryPdf">
+      <div class="onboard-summary-card-text">
+        <strong>Document</strong>
+        <span id="summaryPdfText">—</span>
+      </div>
+      <button class="onboard-summary-card-edit" onclick="editStep('pdf')">Edit</button>
+    </div>
+
+    <!-- Panel: Prompt -->
+    <div class="onboard-panel" id="onboardPromptPanel">
+      <div class="onboard-kicker">What should I look for?</div>
+      <h3>How would you like me to analyze these pages?</h3>
+      <textarea class="onboard-textarea" id="onboardPrompt"
+        placeholder="For example: Look for typos, unclear instructions, and any wording that feels inconsistent.
+
+You can mention specific pages if you want to narrow the scope."></textarea>
+      <div class="onboard-help">The more specific your prompt is, the better my analysis will be. I'll ask if I need clarification.</div>
+      <div class="onboard-inline-actions">
+        <button class="onboard-primary" onclick="goToRefPanel()">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Collapsed summary: Brief -->
+    <div class="onboard-summary-card" id="summaryBrief">
+      <div class="onboard-summary-card-text">
+        <strong>Brief</strong>
+        <span id="summaryBriefText">—</span>
+      </div>
+      <button class="onboard-summary-card-edit" onclick="editStep('brief')">Edit</button>
+    </div>
+
+    <!-- Panel: Reference files -->
+    <div class="onboard-panel" id="onboardRefPanel">
+      <div class="onboard-kicker">Any supporting material?</div>
+      <h3>Are there any additional documents that would help?</h3>
+      <p>A style guide, brief, or reference file — anything that helps me understand what good looks like.</p>
+      <div class="onboard-ref-row">
+        <div>
+          <div class="onboard-ref-label">Attach a reference file</div>
+          <div class="onboard-ref-name" id="onboardRefName" style="display:none"></div>
+        </div>
+        <button class="onboard-ref-btn" onclick="document.getElementById('onboardRefInput').click()">Attach</button>
+      </div>
+      <div class="onboard-inline-actions">
+        <button class="onboard-primary" onclick="runPreflightCheck()">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Collapsed summary: Reference -->
+    <div class="onboard-summary-card" id="summaryRef">
+      <div class="onboard-summary-card-text">
+        <strong>Reference</strong>
+        <span id="summaryRefText">—</span>
+      </div>
+      <button class="onboard-summary-card-edit" onclick="editStep('ref')">Edit</button>
+    </div>
+
+    <!-- Panel: Clarification -->
+    <div class="onboard-panel" id="onboardClarifyPanel">
+      <div class="onboard-kicker">Just one thing</div>
+      <h3>Before I start, I want to make sure I understand.</h3>
+      <div class="onboard-question" id="onboardQuestionBox">
+        <p id="onboardQuestionText"></p>
+        <textarea class="onboard-textarea" id="onboardAnswer"
+          placeholder="Your answer..." style="min-height:80px"></textarea>
+      </div>
+      <div class="onboard-inline-actions">
+        <button class="onboard-primary" onclick="submitClarification()">Continue →</button>
+      </div>
+    </div>
+
+    <!-- Panel: Alignment confirmation -->
+    <div class="onboard-panel" id="onboardAlignPanel">
+      <div class="onboard-kicker">Does this look right?</div>
+      <h3>Here's what I'll focus on.</h3>
+      <div class="onboard-align-summary">
+        <div class="onboard-align-label">I'll go through each page and look for:</div>
+        <ul id="onboardFocusList"></ul>
+      </div>
+
+      <!-- Model recommendation -->
+      <div class="onboard-model-row">
+        <div class="onboard-model-line">
+          I'll use <strong id="onboardModelName">Sonnet</strong> for this —
+          <span id="onboardModelReason">balanced for general review work.</span>
+          <button class="onboard-model-change" onclick="toggleModelPicker()">change</button>
+        </div>
+        <div class="onboard-model-picker" id="onboardModelPicker">
+          <button class="onboard-model-pill" data-model="claude-haiku-4-5-20251001" onclick="selectModel(this)">
+            <strong>Haiku</strong><span>fast · cheap</span>
+          </button>
+          <button class="onboard-model-pill" data-model="claude-sonnet-4-6" onclick="selectModel(this)">
+            <strong>Sonnet</strong><span>balanced</span>
+          </button>
+          <button class="onboard-model-pill" data-model="claude-opus-4-6" onclick="selectModel(this)">
+            <strong>Opus</strong><span>most capable</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="onboard-inline-actions">
+        <button class="onboard-back" onclick="editStep('brief')">← Edit prompt</button>
+        <button class="onboard-primary" onclick="beginAnalysis()">Looks good. Start analysis.</button>
+      </div>
+    </div>
+
+    <!-- Status / loading -->
+    <div class="onboard-status" id="onboardStatus">
+      <div class="onboard-status-line">
+        <span class="onboard-status-dot"></span>
+        <span id="onboardStatusText">Give me a moment — I'm getting oriented.</span>
+      </div>
+      <div class="onboard-status-detail" id="onboardStatusDetail"></div>
+    </div>
+
+    <!-- Dev mode: review CSV loader -->
+    <div class="onboard-ref-row" id="reviewCsvRow" style="display:none;margin-top:16px">
+      <div>
+        <div class="onboard-ref-label">Review CSV — dev mode.</div>
+        <div class="onboard-ref-name" id="reviewCsvName" style="display:none"></div>
+      </div>
+      <button class="onboard-ref-btn" onclick="document.getElementById('reviewCsvInput').click()">Load CSV</button>
+    </div>
+
+    <!-- Gear icon -->
+    <button class="onboard-gear" onclick="openSettings()" title="Settings">⚙</button>
+
+  </div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="onboardPdfInput" accept=".pdf,application/pdf" style="display:none" onchange="onPdfSelected(this.files[0])">
+<input type="file" id="onboardRefInput" style="display:none" onchange="onRefSelected(this.files[0])">
+<input type="file" id="reviewCsvInput" accept=".csv,text/csv" style="display:none" onchange="onReviewCsvSelected(this.files[0])">
+
+<!-- ===================== -->
+<!-- TOP BAR / HEADER      -->
+<!-- ===================== -->
+<div class="update-banner" id="updateBanner">
+  A new version is available. <button onclick="location.reload()">Update now</button>
+</div>
+<div class="topbar">
+  <div class="logo">Page<span class="iq">IQ</span></div>
+  <button class="settings-btn" onclick="openSettings()">Settings</button>
+</div>
+
+<!-- ===================== -->
+<!-- MAIN APP SHELL        -->
+<!-- ===================== -->
+<div class="main">
+
+  <!-- Run summary strip — shown after onboarding completes -->
+  <div class="run-summary" id="runSummary" style="display:none">
+    <div class="run-summary-row">
+      <div class="run-summary-item">
+        <div class="run-summary-label">Document</div>
+        <div class="run-summary-value" id="runSummaryDoc">—</div>
+      </div>
+      <div class="run-summary-divider"></div>
+      <div class="run-summary-item">
+        <div class="run-summary-label">Prompt</div>
+        <div class="run-summary-value" id="runSummaryPrompt">—</div>
+      </div>
+      <div class="run-summary-divider"></div>
+      <div class="run-summary-item run-summary-item-narrow">
+        <div class="run-summary-label">Model</div>
+        <div class="run-summary-value" id="runSummaryModel">—</div>
+      </div>
+      <button class="run-summary-gear" onclick="openSettings()" title="Settings">⚙</button>
+    </div>
+  </div>
+
+  <!-- Setup sections — hidden after onboarding -->
+  <div id="setupSections">
+
+  <!-- ===================== -->
+  <!-- DOCUMENT UPLOAD       -->
+  <!-- ===================== -->
+  <div class="section">
+    <div class="section-label">Document</div>
+    <div class="card">
+      <div class="drop-zone" id="dropZone"
+        ondragover="onDragOver(event)" ondragleave="onDragLeave()" ondrop="onDrop(event)"
+        onclick="document.getElementById('mainPdfInput').click()">
+        <p>Drop a PDF here or click to choose one</p>
+        <button class="btn-sm" onclick="event.stopPropagation();document.getElementById('mainPdfInput').click()">Choose file</button>
+        <div class="loaded" id="pdfLoaded" style="display:none"></div>
+      </div>
+      <input type="file" id="mainPdfInput" accept=".pdf,application/pdf" style="display:none" onchange="onPdfSelected(this.files[0])">
+      <div class="attach-row">
+        <span class="attach-label">Reference material — optional</span>
+        <button class="btn-sm" onclick="document.getElementById('mainRefInput').click()">Attach</button>
+      </div>
+      <input type="file" id="mainRefInput" style="display:none" onchange="onRefSelected(this.files[0])">
+      <div class="attach-name" id="supportName" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- BRIEF / PROMPT INPUT  -->
+  <!-- ===================== -->
+  <div class="section">
+    <div class="section-label">Brief</div>
+    <div class="card">
+      <textarea class="main-prompt" id="promptInput"
+        placeholder="For example: Look for typos or spelling errors, unclear instructions, and any places where the wording feels inconsistent.
+
+You can mention pages if you want to narrow the scope."></textarea>
+      <div class="placeholder-hint">Describe what you want checked as I go through each page. You can be broad or specific.</div>
+
+      <button class="adv-toggle" onclick="toggleAdv()">
+        <span class="adv-arr" id="advArr">▶</span>
+        <span>System instructions (advanced)</span>
+      </button>
+      <div class="adv-box" id="advBox">
+        <p class="adv-hint">General behavior applied to every run — role definition, editorial memo guidance. Leave blank for simple tasks.</p>
+        <textarea class="sys-prompt" id="sysInput"
+          placeholder="You are a senior editorial analyst reviewing curriculum content. After completing the full analysis, write a brief editorial memo summarizing patterns, anomalies, and anything the requester should consider. Be specific and act like an experienced editor, not a machine."></textarea>
+      </div>
+
+      <div class="model-row">
+        <span class="model-label">Model</span>
+        <select id="modelSelect">
+          <option value="claude-haiku-4-5-20251001">Haiku — fast · cheap</option>
+          <option value="claude-sonnet-4-6" selected>Sonnet — balanced</option>
+          <option value="claude-opus-4-6">Opus — most capable</option>
+        </select>
+      </div>
+      <button class="run-btn" id="runBtn" onclick="runAnalysis()">Run analysis</button>
+    </div>
+  </div>
+
+  <!-- ============================= -->
+  <!-- PROGRESS / ANALYSIS STATUS    -->
+  <!-- ============================= -->
+  </div><!-- /#setupSections -->
+  <div class="section">
+    <div class="section-label">Progress</div>
+    <div class="progress-card" id="progressCard">
+      <div class="status-row">
+        <div class="dot" id="statusDot"></div>
+        <span class="status-text" id="statusText">Initializing...</span>
+        <span class="status-meta" id="statusMeta"></span>
+      </div>
+      <div class="bar-wrap"><div class="bar" id="progressBar"></div></div>
+      <div class="bar-meta">
+        <span id="startedAt"></span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================== -->
+  <!-- FINDINGS TABLE (RAW OUTPUT)-->
+  <!-- ========================== -->
+  <div class="section">
+    <div class="section-label">Findings</div>
+    <div class="results-card" id="resultsCard">
+      <div class="results-hdr">
+        <span class="results-title" id="resultsTitle">0 rows</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="export-btn" id="startReviewBtn" onclick="openReviewPane()" disabled style="opacity:0.4;cursor:not-allowed">Start review</button>
+          <button class="export-btn" onclick="exportCSV()">Download CSV</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="results-table-wrap">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Editorial note</div>
+    <div class="memo-card" id="memoCard">
+      <div class="memo-text" id="memoText"></div>
+      <div class="memo-note">Generated once when the full analysis completes.</div>
+    </div>
+  </div>
+
+</div><!-- /.main -->
+
+<!-- ===================== -->
+<!-- SETTINGS / MODALS     -->
+<!-- ===================== -->
+<div class="overlay" id="settingsOverlay" onclick="maybeCloseSettings(event)">
+  <div class="settings-panel">
+    <h2>Settings</h2>
+    <p>Your API key is stored locally in your browser only — it never leaves your device.</p>
+    <label class="field-label">Anthropic API key</label>
+    <input type="password" class="key-input" id="keyInput" placeholder="sk-ant-...">
+    <div class="key-status" id="keyStatus"></div>
+    <div class="settings-actions">
+      <button class="save-btn" onclick="saveKey()">Save key</button>
+      <button class="cancel-btn" onclick="closeSettings()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== -->
+<!-- REVIEW PANE (CORE UX) -->
+<!-- ===================== -->
+<div class="review-pane" id="reviewPane">
+  <div class="review-top">
+    <div>
+      <div class="review-title">Review findings</div>
+      <div class="review-sub" id="reviewSub">We'll go through findings one at a time, anchored to the page they came from.</div>
+    </div>
+    <button class="review-close" onclick="closeReviewPane()">Close</button>
+  </div>
+  <div class="review-toolbar">
+    <button class="review-pill active" data-filter="all" onclick="setReviewFilter('all')">All</button>
+    <button class="review-pill" data-filter="high" onclick="setReviewFilter('high')">High</button>
+    <button class="review-pill" data-filter="medium" onclick="setReviewFilter('medium')">Medium</button>
+    <button class="review-pill" data-filter="low" onclick="setReviewFilter('low')">Low</button>
+    <button class="review-pill flagged" data-filter="flagged" onclick="setReviewFilter('flagged')">Not sure</button>
+    <button class="review-pill" id="autoAcceptBtn" onclick="autoAcceptHigh()">Auto-accept High</button>
+    <div class="review-toolbar-meta">
+      <div id="reviewProgressText">All: 0/0 · 0%</div>
+      <div id="reviewOverallText">Overall: 0/0 · 0%</div>
+      <div id="reviewMomentumText"></div>
+    </div>
+  </div>
+  <div class="review-body" id="reviewBody">
+    <div class="review-empty">Run an analysis first, then open the review pane.</div>
+  </div>
+  <div class="review-footer">
+    <div class="review-footer-meta" id="reviewFooterMeta">Saved as you go. Tap a page to preview it full screen.</div>
+    <div style="display:flex;gap:8px">
+      <button class="review-mini-btn" onclick="resetReviewState()">Start over</button>
+      <button class="export-btn" onclick="exportReviewCSV()">Download reviewed CSV</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================== -->
+<!-- IMAGE PREVIEW OVERLAY      -->
+<!-- ========================== -->
+<div class="preview-overlay" id="previewOverlay" onclick="onPreviewOverlayTap(event)">
+  <div class="preview-stage" id="previewStage">
+    <div class="preview-meta" id="previewMeta"></div>
+    <img id="previewImage" alt="Page preview">
+    <div class="preview-hint">Swipe for pages · tap to return</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="review-toast" id="reviewToast">
+  <span id="reviewToastText"></span>
+  <button onclick="undoLastDecision()">Undo</button>
+</div>
+
+<!-- Start over confirmation -->
+<div class="confirm-modal" id="confirmModal">
+  <div class="confirm-panel">
+    <h3>Start over?</h3>
+    <p>This will clear all your decisions and notes for this session. This can't be undone.</p>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" onclick="closeConfirmModal()">Cancel</button>
+      <button class="confirm-destroy" onclick="confirmStartOver()">Yes, start over</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== -->
+<!-- JAVASCRIPT            -->
+<!-- ===================== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// #region CONFIG
+const HAIKU_MODEL   = 'claude-haiku-4-5-20251001';
+const NOTES_DEBOUNCE = 400;  // ms
+const STATE_KEY_PREFIX = 'pageiq_review_v2_';
+const FILTER_ORDER  = ['high', 'medium', 'low'];
+const API_URL       = 'https://api.anthropic.com/v1/messages';
+const API_VERSION   = '2023-06-01';
+// #endregion
+
+// #region STATE
+let pdfDoc          = null;
+let currentPdfMeta  = null;   // { name, size, pages }
+let supportFileData = null;
+let supportFileName = null;
+let results         = [];
+let columns         = [];
+let startTime       = null;
+let isRunning       = false;
+let reviewCsvFileName = null;
+let reviewMode      = 'analysis';   // 'analysis' | 'csv'
+let pageImageCache  = {};
+let reviewFilter    = 'all';
+let reviewState     = { decisions: {}, notes: {}, currentFilter: 'all', currentId: null };
+let lastDecisionUndo = null;
+let toastTimer      = null;
+let previewPages    = [];
+let previewIndex    = 0;
+let devMode         = new URLSearchParams(location.search).get('mode') === 'test';
+// Onboarding state
+let onboardPromptFinal   = '';
+let onboardClarifyAnswer = '';
+let alignmentFocusList   = [];
+let recommendedModel     = 'claude-sonnet-4-6';
+let recommendedReason    = 'balanced for general review work.';
+let selectedModel        = 'claude-sonnet-4-6';
+const MODEL_LABELS = {
+  'claude-haiku-4-5-20251001': 'Haiku',
+  'claude-sonnet-4-6': 'Sonnet',
+  'claude-opus-4-6': 'Opus'
+};
+// #endregion
+
+// #region THE DOCUMENT
+function onDragOver(e)  { e.preventDefault(); document.getElementById('dropZone').classList.add('dragover'); }
+function onDragLeave()  { document.getElementById('dropZone').classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') onPdfSelected(file);
+}
+
+async function onPdfSelected(file) {
+  if (!file) return;
+  const buf = await file.arrayBuffer();
+  pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+  pageImageCache = {};
+  currentPdfMeta = { name: file.name, size: file.size, pages: pdfDoc.numPages };
+  // Update main app upload indicator
+  const el = document.getElementById('pdfLoaded');
+  el.textContent = file.name + ' · ' + pdfDoc.numPages + ' pages loaded';
+  el.style.display = 'block';
+  // Update onboarding file display
+  document.getElementById('onboardWelcome').style.display = 'none';
+  // Start the conversation
+  collapseStep('pdf', file.name + ' · ' + pdfDoc.numPages + ' pages');
+revealPanel('onboardPromptPanel');
+  tryRestoreReviewState();
+}
+
+function onRefSelected(file) {
+  if (!file) return;
+  supportFileName = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    supportFileData = e.target.result;
+    // Update wherever ref file name is shown
+    const mainEl = document.getElementById('supportName');
+    mainEl.textContent = file.name;
+    mainEl.style.display = 'block';
+    const onboardEl = document.getElementById('onboardRefName');
+    onboardEl.textContent = file.name;
+    onboardEl.style.display = 'block';
+  };
+  reader.readAsText(file);
+}
+
+async function onReviewCsvSelected(file) {
+  if (!file) return;
+  reviewCsvFileName = file.name;
+  const text = await file.text();
+  const rows = parseReviewCSV(text);
+  reviewMode = 'csv';
+  loadResults(rows);
+  const el = document.getElementById('reviewCsvName');
+  el.textContent = file.name + ' · ' + rows.length + ' rows loaded';
+  el.style.display = 'block';
+  if (pdfDoc) tryRestoreReviewState();
+}
+
+async function renderPage(pageNum, scale) {
+  scale = scale || 1.5;
+  if (!pdfDoc) throw new Error('No PDF loaded');
+  const cacheKey = pageNum + '|' + scale;
+  if (pageImageCache[cacheKey]) return pageImageCache[cacheKey];
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  const b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  pageImageCache[cacheKey] = b64;
+  return b64;
+}
+// #endregion
+
+// #region THE CONVERSATION (ONBOARDING FLOW)
+
+// Splash → welcome transition
+function initSplash() {
+  const splash = document.getElementById('onboardSplash');
+  const card = document.getElementById('onboardCard');
+  setTimeout(() => {
+    splash.classList.add('fade-out');
+    setTimeout(() => {
+      splash.classList.add('gone');
+      card.classList.add('visible');
+    }, 400);
+  }, 1500);
+}
+
+// Show a panel additively — collapse the previous active one, reveal the next
+function revealPanel(id) {
+  // Hide all active panels except the one we're revealing
+  ['onboardPromptPanel','onboardRefPanel','onboardClarifyPanel','onboardAlignPanel','onboardStatus'].forEach(pid => {
+    const el = document.getElementById(pid);
+    if (el && pid !== id) el.classList.remove('show');
+  });
+  const target = document.getElementById(id);
+  if (target) target.classList.add('show');
+  // Scroll card to bottom so new panel is visible
+  setTimeout(() => {
+    const card = document.getElementById('onboardCard');
+    card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, 50);
+}
+
+// Collapse a completed step into its summary card
+function collapseStep(step, summaryText) {
+  const summaryId = { pdf: 'summaryPdf', brief: 'summaryBrief', ref: 'summaryRef' }[step];
+  const textId = { pdf: 'summaryPdfText', brief: 'summaryBriefText', ref: 'summaryRefText' }[step];
+  if (!summaryId) return;
+  document.getElementById(textId).textContent = summaryText;
+  document.getElementById(summaryId).classList.add('show');
+}
+
+// Edit a previous step — re-expand it and clear everything downstream
+function editStep(step) {
+  const order = ['pdf', 'brief', 'ref'];
+  const idx = order.indexOf(step);
+  // Hide summary cards and panels for this step and all downstream
+  const summaryMap = { pdf: 'summaryPdf', brief: 'summaryBrief', ref: 'summaryRef' };
+  const panelMap = { pdf: null, brief: 'onboardPromptPanel', ref: 'onboardRefPanel' };
+  order.slice(idx).forEach(s => {
+    const sc = document.getElementById(summaryMap[s]);
+    if (sc) sc.classList.remove('show');
+  });
+  // Also hide clarify and align panels
+  ['onboardClarifyPanel','onboardAlignPanel','onboardStatus'].forEach(pid => {
+    const el = document.getElementById(pid);
+    if (el) el.classList.remove('show');
+  });
+  // Re-show the panel for this step
+  const panelId = panelMap[step];
+  if (panelId) revealPanel(panelId);
+  // Clear downstream state
+  if (idx <= 1) { onboardClarifyAnswer = ''; alignmentFocusList = []; }
+  if (idx <= 0) { /* PDF re-upload — welcome state re-shown */ }
+}
+
+function goToRefPanel() {
+  const prompt = document.getElementById('onboardPrompt').value.trim();
+  if (!prompt) { alert('Add a brief so I know what to focus on.'); return; }
+  onboardPromptFinal = prompt;
+  // Collapse brief into summary
+  const snippet = prompt.length > 60 ? prompt.slice(0, 60) + '…' : prompt;
+  collapseStep('brief', snippet);
+  revealPanel('onboardRefPanel');
+}
+
+async function runPreflightCheck() {
+  const apiKey = localStorage.getItem('pageiq_api_key');
+  const refSummary = supportFileName || 'No reference attached';
+  collapseStep('ref', refSummary);
+
+  const refContext = supportFileData
+    ? '\n\nReference file (' + supportFileName + '):\n' + supportFileData.slice(0, 2000)
+    : '';
+
+  // Test mode: skip all API calls, use fallback focus list
+  if (apiKey === '123') {
+    revealPanel('onboardStatus');
+    document.getElementById('onboardStatusText').textContent = 'Working out what to focus on...';
+    document.getElementById('onboardStatusDetail').textContent = '';
+    setTimeout(() => {
+      alignmentFocusList = parseFocusFallback(onboardPromptFinal);
+      recommendedModel = 'claude-sonnet-4-6';
+      recommendedReason = 'balanced for general review work.';
+      selectedModel = recommendedModel;
+      showAlignment();
+    }, 500);
+    return;
+  }
+
+  // No key: skip to fallback alignment
+  if (!apiKey) {
+    alignmentFocusList = parseFocusFallback(onboardPromptFinal);
+    recommendedModel = 'claude-sonnet-4-6';
+    recommendedReason = 'balanced for general review work.';
+    selectedModel = recommendedModel;
+    showAlignment();
+    return;
+  }
+
+  revealPanel('onboardStatus');
+  document.getElementById('onboardStatusText').textContent = 'Let me read through your brief...';
+  document.getElementById('onboardStatusDetail').textContent = '';
+
+  const checkBody = {
+    model: HAIKU_MODEL,
+    max_tokens: 500,
+    messages: [{
+      role: 'user',
+      content: `You are helping someone prepare to analyze a PDF document. Read their brief and decide:
+1. Is it clear enough to act on without asking a clarifying question?
+2. If not, what is the ONE most important clarifying question to ask?
+
+Brief: "${onboardPromptFinal}"${refContext}
+
+Respond in JSON only, no preamble:
+{"clear": true} if clear enough
+{"clear": false, "question": "your single clarifying question here"} if not clear
+
+Rules:
+- Only flag as unclear if genuinely ambiguous
+- Do NOT ask about scope, page count, or output format
+- Keep the question short and specific`
+    }]
+  };
+
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': API_VERSION,
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify(checkBody)
+    });
+    if (!resp.ok) {
+      if (resp.status === 401) { showOnboardError('That key isn\'t being accepted. Check it in settings.'); return; }
+      if (resp.status === 429) { showOnboardError('Rate limit hit — try again in a moment.'); return; }
+      throw new Error('api');
+    }
+    const data = await resp.json();
+    const raw = (data.content || []).map(b => b.text || '').join('');
+    let parsed;
+    try { parsed = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch(e) { parsed = { clear: true }; }
+    if (parsed.clear === false && parsed.question) {
+      document.getElementById('onboardQuestionText').textContent = parsed.question;
+      revealPanel('onboardClarifyPanel');
+    } else {
+      await generateAlignment(apiKey, onboardPromptFinal, refContext);
+    }
+  } catch(err) {
+    // Network or unknown — fall through silently
+    alignmentFocusList = parseFocusFallback(onboardPromptFinal);
+    recommendedModel = 'claude-sonnet-4-6';
+    recommendedReason = 'balanced for general review work.';
+    selectedModel = recommendedModel;
+    showAlignment();
+  }
+}
+
+async function submitClarification() {
+  const answer = document.getElementById('onboardAnswer').value.trim();
+  if (!answer) { alert('Please answer the question before continuing.'); return; }
+  onboardClarifyAnswer = answer;
+  const apiKey = localStorage.getItem('pageiq_api_key');
+  const refContext = supportFileData
+    ? '\n\nReference file (' + supportFileName + '):\n' + supportFileData.slice(0, 2000)
+    : '';
+  const enrichedPrompt = onboardPromptFinal + '\n\nClarification: ' + answer;
+  revealPanel('onboardStatus');
+  document.getElementById('onboardStatusText').textContent = 'Got it. Working out what to focus on...';
+  await generateAlignment(apiKey, enrichedPrompt, refContext);
+}
+
+async function generateAlignment(apiKey, prompt, refContext) {
+  document.getElementById('onboardStatusText').textContent = 'Working out what to focus on...';
+
+  if (apiKey && apiKey !== '123') {
+    const alignBody = {
+      model: HAIKU_MODEL,
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: `Given this brief for a PDF analysis, do two things:
+1. List the 3-5 most important things to check for on each page.
+2. Recommend the best Claude model: "haiku" (fast, simple checks like typos/formatting), "sonnet" (balanced, most editorial and review work), or "opus" (most capable, nuanced judgment or complex reasoning required).
+
+Brief: "${prompt}"${refContext}
+
+Respond in JSON only:
+{"focus": ["item 1", "item 2", "item 3"], "model": "sonnet", "reason": "short justification under 10 words"}
+
+Rules:
+- Each focus item is 5-10 words max
+- Default to sonnet unless clearly simple (haiku) or genuinely complex (opus)
+- Reason explains why that model fits this specific brief`
+      }]
+    };
+
+    try {
+      const resp = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': API_VERSION,
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify(alignBody)
+      });
+      if (!resp.ok) {
+        if (resp.status === 401) { showOnboardError('That key isn\'t being accepted. Check it in settings.'); return; }
+        if (resp.status === 429) { showOnboardError('Rate limit hit — try again in a moment.'); return; }
+        throw new Error('api');
+      }
+      const data = await resp.json();
+      const raw = (data.content || []).map(b => b.text || '').join('');
+      let parsed;
+      try { parsed = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch(e) { parsed = null; }
+      alignmentFocusList = (parsed && parsed.focus) ? parsed.focus : parseFocusFallback(prompt);
+      const modelMap = { haiku: 'claude-haiku-4-5-20251001', sonnet: 'claude-sonnet-4-6', opus: 'claude-opus-4-6' };
+      recommendedModel = (parsed && modelMap[parsed.model]) ? modelMap[parsed.model] : 'claude-sonnet-4-6';
+      recommendedReason = (parsed && parsed.reason) ? parsed.reason : 'balanced for general review work.';
+      if (!/[.!?]$/.test(recommendedReason)) recommendedReason += '.';
+      selectedModel = recommendedModel;
+    } catch(e) {
+      alignmentFocusList = parseFocusFallback(prompt);
+      recommendedModel = 'claude-sonnet-4-6';
+      recommendedReason = 'balanced for general review work.';
+      selectedModel = recommendedModel;
+    }
+  } else {
+    alignmentFocusList = parseFocusFallback(prompt);
+    recommendedModel = 'claude-sonnet-4-6';
+    recommendedReason = 'balanced for general review work.';
+    selectedModel = recommendedModel;
+  }
+
+  showAlignment();
+}
+
+function showOnboardError(msg) {
+  document.getElementById('onboardStatusText').textContent = msg;
+  const detail = document.getElementById('onboardStatusDetail');
+  detail.innerHTML = '<button class="onboard-back" style="margin-top:10px" onclick="openSettings()">Open settings</button>';
+  revealPanel('onboardStatus');
+}
+
+function showAlignment() {
+  const list = document.getElementById('onboardFocusList');
+  list.innerHTML = alignmentFocusList.map(item => '<li>' + escapeHtml(item) + '</li>').join('');
+  // Update model recommendation display
+  document.getElementById('onboardModelName').textContent = MODEL_LABELS[recommendedModel] || 'Sonnet';
+  document.getElementById('onboardModelReason').textContent = recommendedReason;
+  document.querySelectorAll('.onboard-model-pill').forEach(pill => {
+    pill.classList.toggle('active', pill.dataset.model === selectedModel);
+  });
+  document.getElementById('onboardModelPicker').classList.remove('open');
+  // Merge clarification into prompt if present
+  if (onboardClarifyAnswer && !onboardPromptFinal.includes('Clarification:')) {
+    onboardPromptFinal = onboardPromptFinal + '\n\nClarification: ' + onboardClarifyAnswer;
+  }
+  revealPanel('onboardAlignPanel');
+}
+
+function toggleModelPicker() {
+  document.getElementById('onboardModelPicker').classList.toggle('open');
+}
+
+function selectModel(btn) {
+  selectedModel = btn.dataset.model;
+  document.querySelectorAll('.onboard-model-pill').forEach(pill => {
+    pill.classList.toggle('active', pill === btn);
+  });
+  document.getElementById('onboardModelName').textContent = MODEL_LABELS[selectedModel] || 'Sonnet';
+  document.getElementById('onboardModelReason').textContent =
+    selectedModel === recommendedModel ? recommendedReason : 'your choice.';
+}
+
+
+function parseFocusFallback(prompt) {
+  const clean = prompt.replace(/\s+/g, ' ').trim();
+  const parts = clean.replace(/^look for\s+/i,'').replace(/^check for\s+/i,'')
+    .split(/,|\band\b/gi).map(s => s.trim()).filter(Boolean);
+  if (!parts.length) return ['A careful page-by-page review'];
+  return parts.slice(0, 5).map(s => s.charAt(0).toUpperCase() + s.slice(1));
+}
+
+async function beginAnalysis() {
+  // Sync values from onboarding into the hidden main app fields
+  document.getElementById('promptInput').value = onboardPromptFinal;
+  const modelSelect = document.getElementById('modelSelect');
+  if (modelSelect) modelSelect.value = selectedModel;
+
+  // Brief pause with status before launching
+  revealPanel('onboardStatus');
+  document.getElementById('onboardStatusText').textContent = 'Starting analysis…';
+  document.getElementById('onboardStatusDetail').textContent =
+    currentPdfMeta ? currentPdfMeta.pages + ' pages to go through.' : '';
+
+  setTimeout(async () => {
+    // Hide onboarding shell, show main app
+    document.body.classList.remove('onboarding-active');
+    // Hide the setup sections (upload / brief / run button)
+    const setup = document.getElementById('setupSections');
+    if (setup) setup.style.display = 'none';
+    // Show the summary strip
+    const strip = document.getElementById('runSummary');
+    if (strip) {
+      strip.style.display = 'block';
+      const promptSnippet = onboardPromptFinal.length > 60
+        ? onboardPromptFinal.slice(0, 60) + '…'
+        : onboardPromptFinal;
+      document.getElementById('runSummaryDoc').textContent =
+        currentPdfMeta ? currentPdfMeta.name + ' · ' + currentPdfMeta.pages + ' pages' : '—';
+      document.getElementById('runSummaryPrompt').textContent = promptSnippet;
+      document.getElementById('runSummaryModel').textContent = MODEL_LABELS[selectedModel] || 'Sonnet';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await runAnalysis();
+  }, 600);
+}
+// #endregion
+
+// #region THE ANALYSIS
+function parseChunks(prompt, totalPages) {
+  const rangeMatch = prompt.match(/pages?\s+(\d+)\s*[-\u2013]\s*(\d+)/i);
+  const pairsMatch = prompt.match(/in\s+pairs?|two\s+pages?\s+at\s+a\s+time/i);
+  let start = 1, end = totalPages;
+  if (rangeMatch) {
+    start = parseInt(rangeMatch[1]);
+    end = Math.min(parseInt(rangeMatch[2]), totalPages);
+  }
+  const chunkSize = pairsMatch ? 2 : 1;
+  const chunks = [];
+  for (let p = start; p <= end; p += chunkSize) {
+    chunks.push({ start: p, end: Math.min(p + chunkSize - 1, end) });
+  }
+  return chunks;
+}
+
+function buildHeaders(obj) {
+  columns = Object.keys(obj);
+  document.getElementById('tableHead').innerHTML = '<tr>' + columns.map(c => '<th>' + escapeHtml(c) + '</th>').join('') + '</tr>';
+}
+
+function addRow(obj) {
+  const row = normalizeReviewRecord(obj, results.length);
+  results.push(row);
+  if (columns.length === 0) {
+    columns = inferColumns(results);
+    buildHeaders(results[0]);
+  }
+  // Append incrementally — no full redraw
+  const tbody = document.getElementById('tableBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = columns.map(col => {
+    const val = row[col] != null ? row[col] : '';
+    const lower = String(val).toLowerCase();
+    let cls = '';
+    if (lower === 'high' || lower === 'clear') cls = 'b-high';
+    else if (lower === 'medium') cls = 'b-medium';
+    else if (lower === 'low' || lower === 'flag') cls = 'b-low';
+    if (cls) return '<td><span class="badge ' + cls + '">' + escapeHtml(String(val)) + '</span></td>';
+    return '<td>' + escapeHtml(String(val)) + '</td>';
+  }).join('');
+  tbody.appendChild(tr);
+
+  document.getElementById('resultsTitle').textContent = results.length + ' finding' + (results.length === 1 ? '' : 's');
+  document.getElementById('resultsCard').classList.add('visible');
+  // Enable Start review button once we have results
+  const btn = document.getElementById('startReviewBtn');
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  btn.style.cursor = 'pointer';
+}
+
+function loadResults(rows) {
+  results = [];
+  columns = [];
+  document.getElementById('tableBody').innerHTML = '';
+  document.getElementById('tableHead').innerHTML = '';
+  console.log('loadResults got rows:', rows.length);
+  rows.forEach(r => addRow(r));
+  console.log('results after addRow loop:', results.length);
+  document.getElementById('resultsCard').classList.add('visible');
+}
+
+async function runAnalysis() {
+  const apiKey = localStorage.getItem('pageiq_api_key');
+  if (!apiKey) { openSettings(); return; }
+  if (!pdfDoc) { alert('Please upload a PDF first.'); return; }
+  const prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt) { alert('Please enter a prompt.'); return; }
+
+  const sysPrompt = document.getElementById('sysInput').value.trim();
+  const model = document.getElementById('modelSelect').value;
+  const chunks = parseChunks(prompt, pdfDoc.numPages);
+  if (!chunks.length) { alert('No pages found in the specified range.'); return; }
+
+  reviewMode = 'analysis';
+  results = [];
+  columns = [];
+  reviewState = { decisions: {}, notes: {}, currentFilter: 'all', currentId: null };
+  persistReviewState();
+  updateReviewStatus();
+
+  document.getElementById('tableBody').innerHTML = '';
+  document.getElementById('tableHead').innerHTML = '';
+  document.getElementById('memoText').textContent = '';
+  document.getElementById('memoCard').classList.remove('visible');
+  document.getElementById('progressCard').classList.add('visible');
+  document.getElementById('resultsCard').classList.remove('visible');
+
+  const runBtn = document.getElementById('runBtn');
+  runBtn.disabled = true;
+  runBtn.classList.add('running');
+  runBtn.textContent = 'Running...';
+
+  // Disable Start review while running
+  const reviewBtn = document.getElementById('startReviewBtn');
+  reviewBtn.disabled = true;
+  reviewBtn.style.opacity = '0.4';
+  reviewBtn.style.cursor = 'not-allowed';
+
+  startTime = new Date();
+  document.getElementById('startedAt').textContent = 'Started ' + startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('statusDot').className = 'dot';
+  isRunning = true;
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const pct = Math.round((i / chunks.length) * 100);
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = pct + '%';
+    document.getElementById('statusText').textContent = 'Working through page ' + (i + 1) + ' of ' + chunks.length;
+
+    if (i > 0) {
+      const elapsed = (new Date() - startTime) / 1000;
+      const remaining = Math.round((elapsed / i) * (chunks.length - i));
+      const mins = Math.floor(remaining / 60);
+      const secs = remaining % 60;
+      document.getElementById('statusMeta').textContent = mins > 0 ? '~' + mins + 'm ' + secs + 's remaining' : '~' + secs + 's remaining';
+    }
+
+    const images = [];
+    for (let p = chunk.start; p <= chunk.end; p++) {
+      const b64 = await renderPage(p, 1.5);
+      images.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } });
+    }
+
+    const pageLabel = chunk.start === chunk.end ? 'Page ' + chunk.start : 'Pages ' + chunk.start + '–' + chunk.end;
+    const userContent = images.concat([{
+      type: 'text',
+      text: pageLabel + '\n\n' + prompt +
+        (supportFileData ? '\n\nSupporting file (' + supportFileName + '):\n' + supportFileData : '') +
+        '\n\nRespond in JSON only. Return an array of objects, one per finding. Include a "page" field.'
+    }]);
+
+    const body = { model: model, max_tokens: 1500, messages: [{ role: 'user', content: userContent }] };
+    if (sysPrompt) body.system = sysPrompt;
+
+    try {
+      const resp = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': API_VERSION,
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify(body)
+      });
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error ? err.error.message : resp.statusText);
+      }
+      const data = await resp.json();
+      const text = data.content.map(b => b.text || '').join('');
+      parseResult(text).forEach(r => addRow(r));
+    } catch(err) {
+      addRow({ page: chunk.start, finding: pageLabel, confidence: '—', error: err.message });
+    }
+  }
+
+  isRunning = false;
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('progressPct').textContent = '100%';
+  document.getElementById('statusDot').className = 'dot done';
+  document.getElementById('statusText').textContent = 'Found ' + results.length + ' thing' + (results.length === 1 ? '' : 's') + ' worth a closer look';
+  document.getElementById('statusMeta').textContent = '';
+  runBtn.disabled = false;
+  runBtn.classList.remove('running');
+  runBtn.textContent = 'Run analysis';
+  if (sysPrompt) await generateMemo(sysPrompt, model, apiKey);
+}
+
+async function generateMemo(sysPrompt, model, apiKey) {
+  const memoCard = document.getElementById('memoCard');
+  const memoText = document.getElementById('memoText');
+  memoCard.classList.add('visible');
+  memoText.textContent = 'Generating editorial notes...';
+  const summary = results.map(r => JSON.stringify(r)).join('\n');
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': API_VERSION,
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: model, max_tokens: 600, system: sysPrompt,
+        messages: [{ role: 'user', content: 'Here are the full analysis results:\n\n' + summary + '\n\nWrite your editorial memo now. Plain prose only, no JSON, no bullet points. 2-4 sentences.' }]
+      })
+    });
+    const data = await resp.json();
+    memoText.textContent = data.content.map(b => b.text || '').join('');
+  } catch(err) {
+    memoText.textContent = 'Could not generate editorial notes: ' + err.message;
+  }
+}
+
+function parseResult(text) {
+  try {
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed.results && Array.isArray(parsed.results)) return parsed.results;
+    return [parsed];
+  } catch(e) {
+    return [{ page: '?', raw_response: text.slice(0, 200), confidence: '—' }];
+  }
+}
+// #endregion
+
+// #region THE FINDINGS (normalise + helpers)
+function inferColumns(rows) {
+  const seen = {};
+  rows.forEach(r => Object.keys(r).forEach(k => { if (!k.startsWith('_')) seen[k] = true; }));
+  return Object.keys(seen);
+}
+
+function normalizeReviewRecord(obj, index) {
+  const row = Object.assign({}, obj);
+  row._id = row._id || 'row_' + index;
+  row._confidence = extractConfidence(row);
+  row._finding = extractFinding(row);
+  row._pages = extractPages(row);
+  if (!row.page) row.page = row._pages[0] || '?';
+  return row;
+}
+
+function extractConfidence(row) {
+  const keys = ['confidence','Confidence','severity','Severity','priority','Priority'];
+  for (const k of keys) { if (row[k]) return String(row[k]); }
+  return '—';
+}
+
+function extractPrimaryPage(row) {
+  const keys = ['page','Page','page_number','pageNumber'];
+  for (const k of keys) { const v = parseInt(row[k]); if (!isNaN(v)) return v; }
+  return 1;
+}
+
+function extractPages(row) {
+  if (row._pages) return row._pages;
+  if (row.page_start || row.page_end) {
+    const start = parseInt(row.page_start || row.page || 1, 10);
+    const end = parseInt(row.page_end || row.page || start, 10);
+    const list = [];
+    for (let p = start; p <= Math.min(end, start + 9); p++) list.push(p);
+    return list;
+  }
+  return [extractPrimaryPage(row)];
+}
+
+function extractFinding(row) {
+  const preferred = ['finding','Finding','standard_code','description','evidence','raw_response'];
+  for (const key of preferred) { if (row[key]) return String(row[key]); }
+  for (const key of Object.keys(row)) {
+    if (key.startsWith('_')) continue;
+    if (['page','pages','page_start','page_end','confidence','Confidence','reviewer_decision','reviewer_notes','decision','notes'].includes(key)) continue;
+    if (row[key]) return String(row[key]);
+  }
+  return 'Untitled finding';
+}
+
+function parseReviewCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (!lines.length) return [];
+  const headers = splitCsvLine(lines[0]).map(h => h.trim());
+  return lines.slice(1).filter(Boolean).map((line, idx) => {
+    const cols = splitCsvLine(line);
+    const row = {};
+    headers.forEach((h, i) => row[h] = cols[i] || '');
+    row._id = 'csv_' + idx;
+    return row;
+  });
+}
+
+function splitCsvLine(line) {
+  const cols = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"' && !inQ) { inQ = true; }
+    else if (ch === '"' && inQ && line[i+1] === '"') { cur += '"'; i++; }
+    else if (ch === '"' && inQ) { inQ = false; }
+    else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  cols.push(cur);
+  return cols;
+}
+
+function buildDetailsHtml(row) {
+  const omit = ['_id','_pages','_confidence','_finding','page','pages','page_start','page_end','confidence','Confidence','reviewer_decision','reviewer_notes','decision','notes'];
+  let html = '';
+  Object.keys(row).forEach(key => {
+    if (key.startsWith('_') || omit.includes(key)) return;
+    if (!row[key]) return;
+    html += `<div class="review-field"><div class="review-field-label">${escapeHtml(key)}</div><div class="review-field-value">${escapeHtml(String(row[key])).replace(/\n/g,'<br>')}</div></div>`;
+  });
+  return html;
+}
+
+function badgeClass(conf) {
+  const lower = String(conf).toLowerCase();
+  if (lower === 'high' || lower === 'clear') return 'b-high';
+  if (lower === 'medium') return 'b-medium';
+  if (lower === 'low' || lower === 'flag') return 'b-low';
+  return 'b-none';
+}
+// #endregion
+
+// #region REVIEW STATE
+function reviewStateKey() {
+  if (!currentPdfMeta) return null;
+  return STATE_KEY_PREFIX + [currentPdfMeta.name, currentPdfMeta.size, currentPdfMeta.pages, reviewMode, reviewCsvFileName || 'analysis'].join('_');
+}
+
+function persistReviewState() {
+  const key = reviewStateKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(reviewState));
+}
+
+function tryRestoreReviewState() {
+  const key = reviewStateKey();
+  if (!key) return;
+  const raw = localStorage.getItem(key);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    reviewState = Object.assign({ decisions: {}, notes: {}, currentFilter: 'all', currentId: null }, parsed);
+    reviewFilter = reviewState.currentFilter || 'all';
+  } catch(e) {}
+}
+
+function resetReviewState() { document.getElementById('confirmModal').classList.add('open'); }
+function closeConfirmModal() { document.getElementById('confirmModal').classList.remove('open'); }
+function confirmStartOver() {
+  closeConfirmModal();
+  reviewState = { decisions: {}, notes: {}, currentFilter: reviewFilter, currentId: null };
+  persistReviewState();
+  renderReviewCard();
+  updateReviewStatus();
+}
+
+function decisionFor(id) { return reviewState.decisions[id] || ''; }
+function noteFor(id) { return reviewState.notes[id] || ''; }
+
+function reviewItemsForFilter(filter) {
+  return results.filter(row => {
+    const conf = String(row._confidence || '').toLowerCase();
+    const decision = decisionFor(row._id);
+    if (filter === 'all') return true;
+    if (filter === 'flagged') return decision === 'flag';
+    return conf === filter;
+  });
+}
+
+function reviewedCountForFilter(filter) {
+  return reviewItemsForFilter(filter).filter(r => !!decisionFor(r._id)).length;
+}
+
+function percent(n, d) { return d ? Math.round((n / d) * 100) : 0; }
+
+function momentumCopy(done, total) {
+  if (!total) return '';
+  const pct = percent(done, total);
+  if (pct === 100) return 'All set';
+  if (pct >= 75) return 'Final stretch';
+  if (pct >= 50) return 'Cruising';
+  if (done >= 10) return 'Locked in';
+  if (done >= 5) return 'On a roll';
+  return '';
+}
+
+function setReviewFilter(filter) {
+  reviewFilter = filter;
+  reviewState.currentFilter = filter;
+  persistReviewState();
+  renderReviewCard();
+  updateReviewStatus();
+}
+
+function openReviewPane() {
+  document.getElementById('reviewPane').classList.add('open');
+  renderReviewCard();
+  updateReviewStatus();
+}
+function closeReviewPane() { document.getElementById('reviewPane').classList.remove('open'); }
+
+function updateReviewStatus() {
+  // Pills: show total count per tier
+  ['all','high','medium','low','flagged'].forEach(f => {
+    const btn = document.querySelector('.review-pill[data-filter="' + f + '"]');
+    if (!btn) return;
+    const items = reviewItemsForFilter(f);
+    const label = f === 'flagged' ? 'Not sure' : (f.charAt(0).toUpperCase() + f.slice(1));
+    btn.textContent = items.length > 0 ? label + ' (' + items.length + ')' : label;
+    btn.classList.toggle('active', f === reviewFilter);
+  });
+
+  const filteredItems = reviewItemsForFilter(reviewFilter);
+  const filteredDone = filteredItems.filter(r => !!decisionFor(r._id)).length;
+  const overallDone = results.filter(r => !!decisionFor(r._id)).length;
+
+  const filterLabel = reviewFilter === 'flagged' ? 'Not sure' : capitalize(reviewFilter);
+  document.getElementById('reviewProgressText').textContent =
+    filterLabel + ': ' + filteredDone + '/' + filteredItems.length + ' · ' + percent(filteredDone, filteredItems.length) + '%';
+  document.getElementById('reviewOverallText').textContent =
+    'Overall: ' + overallDone + '/' + results.length + ' · ' + percent(overallDone, results.length) + '%';
+  document.getElementById('reviewMomentumText').textContent = momentumCopy(filteredDone, filteredItems.length);
+
+  const notSure = results.filter(r => decisionFor(r._id) === 'flag').length;
+  document.getElementById('reviewFooterMeta').textContent =
+    'Saved as you go. ' + (notSure > 0 ? notSure + ' not sure · ' : '') + 'Tap a page to preview.';
+
+  const sub = document.getElementById('reviewSub');
+  if (sub) {
+    const allComplete = overallDone === results.length && results.length > 0;
+    sub.textContent = allComplete
+      ? 'You\'ve reviewed everything I found across the pages in this document.'
+      : 'One finding at a time, anchored to the page it came from.';
+  }
+}
+
+function nextCardCandidate() {
+  const items = reviewItemsForFilter(reviewFilter);
+  if (!items.length) return null;
+  const unresolved = items.filter(r => !decisionFor(r._id));
+
+  // Auto-advance High → Medium → Low when filter is fully reviewed
+  if (!unresolved.length) {
+    if (FILTER_ORDER.includes(reviewFilter)) {
+      for (const next of FILTER_ORDER.slice(FILTER_ORDER.indexOf(reviewFilter) + 1)) {
+        const nextUnresolved = reviewItemsForFilter(next).filter(r => !decisionFor(r._id));
+        if (nextUnresolved.length) {
+          reviewFilter = next;
+          reviewState.currentFilter = next;
+          persistReviewState();
+          updateReviewStatus();
+          return nextUnresolved[0];
+        }
+      }
+    }
+    return null;
+  }
+
+  if (reviewState.currentId) {
+    const idx = items.findIndex(r => r._id === reviewState.currentId);
+    if (idx >= 0) {
+      const next = items.slice(idx + 1).find(r => !decisionFor(r._id));
+      if (next) return next;
+    }
+  }
+  return unresolved[0];
+}
+// #endregion
+
+// #region REVIEW CARD
+async function renderReviewCard() {
+  const body = document.getElementById('reviewBody');
+  if (!results.length) {
+   body.innerHTML = '<div class="review-empty">Load a CSV or run an analysis first, then open the review pane.</div>';
+    updateReviewStatus();
+    return;
+  }
+  console.log('renderReviewCard results length:', results.length);
+  const row = nextCardCandidate();
+  console.log('nextCardCandidate row:', row);
+    
+  if (!row) {
+    const overallDone = results.filter(r => !!decisionFor(r._id)).length;
+    const allComplete = overallDone === results.length;
+    body.innerHTML = '<div class="review-empty">' +
+      (allComplete
+        ? '✓ All ' + results.length + ' findings reviewed. Download your reviewed CSV below.'
+        : 'No unreviewed items in this filter. Switch to another filter or download your CSV.')
+      + '</div>';
+    updateReviewStatus();
+    return;
+  }
+  reviewState.currentId = row._id;
+  persistReviewState();
+
+  const pageNum = Number(row.page);
+const previewB64 = (pdfDoc && Number.isInteger(pageNum) && pageNum >= 1 && pageNum <= pdfDoc.numPages)
+  ? await renderPage(pageNum, 0.7)
+  : null;
+  const cardHtml = `
+    <div class="review-stack">
+      <div class="review-peek"></div>
+      <div class="swipe-shell" id="swipeShell">
+        <div class="review-card-active" id="reviewCard">
+          <div class="review-card-head">
+            <div class="review-card-finding">${escapeHtml(row._finding)}</div>
+            <div class="review-card-meta">
+              <span class="badge ${badgeClass(row._confidence)}">${escapeHtml(row._confidence)}</span>
+              <span class="review-card-page">Page ${row.page}${row._pages.length > 1 ? ' · ' + row._pages.length + ' pages' : ''}</span>
+            </div>
+            <div class="review-card-actions">
+              <button class="review-action accept" onclick="applyDecision('${row._id}','accept')">✓ Accept</button>
+              <button class="review-action reject" onclick="applyDecision('${row._id}','reject')">✕ Reject</button>
+              <button class="review-action flag" onclick="applyDecision('${row._id}','flag')">Flag</button>
+            </div>
+          </div>
+          <div class="review-body-fields">
+            ${buildDetailsHtml(row)}
+            ${previewB64 ? `
+            <div class="review-image-wrap" onclick="openPreview(${JSON.stringify(row._pages)}, 0)">
+              <img src="data:image/jpeg;base64,${previewB64}" alt="Page preview">
+            </div>
+            <div class="review-image-note">Tap to open full page · swipe in preview for more pages</div>
+            ` : ''}
+            <button class="review-add-note" onclick="toggleNoteBox()">+ Add note</button>
+            <div class="review-note-box ${noteFor(row._id) ? 'open' : ''}" id="reviewNoteBox">
+              <textarea class="review-notes" id="reviewNotes" placeholder="Reviewer note...">${escapeHtml(noteFor(row._id))}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  body.innerHTML = cardHtml;
+
+  // Debounced notes save
+  const notesEl = document.getElementById('reviewNotes');
+  if (notesEl) {
+    let notesTimer = null;
+    notesEl.addEventListener('input', e => {
+      clearTimeout(notesTimer);
+      notesTimer = setTimeout(() => {
+        reviewState.notes[row._id] = e.target.value;
+        persistReviewState();
+      }, NOTES_DEBOUNCE);
+    });
+  }
+
+  updateReviewStatus();
+}
+
+function toggleNoteBox() {
+  const box = document.getElementById('reviewNoteBox');
+  if (box) box.classList.toggle('open');
+}
+
+function applyDecision(id, decision) {
+  lastDecisionUndo = { id, previous: reviewState.decisions[id] || '' };
+  reviewState.decisions[id] = decision;
+  persistReviewState();
+  showToast(decision);
+  renderReviewCard();
+  updateReviewStatus();
+}
+
+function showToast(decision) {
+  const toast = document.getElementById('reviewToast');
+  const label = decision === 'accept' ? 'Accepted' : decision === 'reject' ? 'Rejected' : 'Not sure';
+  document.getElementById('reviewToastText').textContent = label;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function undoLastDecision() {
+  if (!lastDecisionUndo) return;
+  if (lastDecisionUndo.batch) {
+    lastDecisionUndo.batch.forEach(({ id, previous }) => {
+      if (previous) reviewState.decisions[id] = previous;
+      else delete reviewState.decisions[id];
+    });
+  } else {
+    if (lastDecisionUndo.previous) reviewState.decisions[lastDecisionUndo.id] = lastDecisionUndo.previous;
+    else delete reviewState.decisions[lastDecisionUndo.id];
+    // Return to the card we just decided on
+    reviewState.currentId = lastDecisionUndo.id;
+  }
+  persistReviewState();
+  document.getElementById('reviewToast').classList.remove('show');
+  renderReviewCard();
+  updateReviewStatus();
+  lastDecisionUndo = null;
+}
+
+function autoAcceptHigh() {
+  const highs = reviewItemsForFilter('high').filter(r => !decisionFor(r._id));
+  if (!highs.length) return;
+  lastDecisionUndo = { batch: highs.map(r => ({ id: r._id, previous: reviewState.decisions[r._id] || '' })) };
+  highs.forEach(r => { reviewState.decisions[r._id] = 'accept'; });
+  persistReviewState();
+  document.getElementById('reviewToastText').textContent = highs.length + ' high-confidence item' + (highs.length === 1 ? '' : 's') + ' accepted';
+  document.getElementById('reviewToast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => document.getElementById('reviewToast').classList.remove('show'), 2500);
+  renderReviewCard();
+  updateReviewStatus();
+}
+// #endregion
+
+// #region IMAGE PREVIEW
+async function openPreview(pages, startIdx) {
+  if (!pdfDoc) return;
+  previewPages = pages;
+  previewIndex = startIdx || 0;
+  document.getElementById('previewOverlay').classList.add('open');
+  await renderPreviewImage();
+}
+
+async function renderPreviewImage() {
+  const pageNum = previewPages[previewIndex];
+  const b64 = await renderPage(pageNum, 1.35);
+  document.getElementById('previewImage').src = 'data:image/jpeg;base64,' + b64;
+  document.getElementById('previewMeta').textContent = 'Page ' + pageNum + (previewPages.length > 1 ? ' · ' + (previewIndex + 1) + ' of ' + previewPages.length : '');
+}
+
+function onPreviewOverlayTap(e) {
+  // Only close on background tap, not on image swipe
+  if (e.target.id === 'previewOverlay') closePreview();
+}
+
+function closePreview() { document.getElementById('previewOverlay').classList.remove('open'); }
+
+// Preview swipe — attached after DOM ready
+let previewSwipeStartX = 0;
+// #endregion
+
+// #region THE EXPORT
+function exportCSV() {
+  if (!results.length) return;
+  const cols = columns.length ? columns : inferColumns(results);
+  const header = cols.join(',');
+  const rows = results.map(r => cols.map(c => csvEscape(r[c] != null ? r[c] : '')).join(','));
+  downloadBlob([header].concat(rows).join('\n'), 'pageiq_results_' + today() + '.csv', 'text/csv');
+}
+
+function exportReviewCSV() {
+  if (!results.length) return;
+  const baseCols = (columns.length ? columns : inferColumns(results)).filter(c => c !== 'reviewer_decision' && c !== 'reviewer_notes');
+  const cols = baseCols.concat(['reviewer_decision', 'reviewer_notes']);
+  const lines = [cols.map(csvEscape).join(',')];
+  results.forEach(r => {
+    const out = Object.assign({}, r);
+    out.reviewer_decision = decisionFor(r._id);
+    out.reviewer_notes = noteFor(r._id);
+    lines.push(cols.map(c => csvEscape(out[c] != null ? out[c] : '')).join(','));
+  });
+  downloadBlob(lines.join('\n'), 'pageiq_reviewed_' + today() + '.csv', 'text/csv');
+}
+
+function csvEscape(v) {
+  const s = String(v).replace(/"/g, '""');
+  return /[",\n]/.test(s) ? '"' + s + '"' : s;
+}
+function downloadBlob(text, filename, type) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+function today() { return new Date().toISOString().slice(0, 10); }
+// #endregion
+
+// #region SETTINGS
+function openSettings() {
+  const key = localStorage.getItem('pageiq_api_key') || '';
+  document.getElementById('keyInput').value = key;
+  updateKeyStatus(key);
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+function maybeCloseSettings(e) { if (e.target === document.getElementById('settingsOverlay')) closeSettings(); }
+function saveKey() {
+  const key = document.getElementById('keyInput').value.trim();
+  if (!key) return;
+  localStorage.setItem('pageiq_api_key', key);
+  updateKeyStatus(key);
+  setTimeout(closeSettings, 500);
+}
+function updateKeyStatus(key) {
+  const el = document.getElementById('keyStatus');
+  if (!key) { el.textContent = 'No key set'; el.className = 'key-status unset'; return; }
+  if (key === '123') { el.textContent = 'Test mode active'; el.className = 'key-status set'; return; }
+  if (!key.startsWith('sk-ant-')) {
+    el.textContent = 'That doesn\'t look like an Anthropic key — should start with sk-ant-';
+    el.className = 'key-status unset';
+  } else {
+    el.textContent = 'Key saved'; el.className = 'key-status set';
+  }
+}
+function toggleAdv() {
+  const box = document.getElementById('advBox');
+  const arr = document.getElementById('advArr');
+  const open = box.classList.toggle('open');
+  arr.classList.toggle('open', open);
+}
+// #endregion
+
+// #region UTILITIES
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// #endregion
+
+// #region WAKE UP (INIT)
+window.addEventListener('DOMContentLoaded', () => {
+  // Start in onboarding mode
+  document.body.classList.add('onboarding-active');
+initSplash();
+
+  // Dev mode: show CSV loader
+  document.getElementById('reviewCsvRow').style.display = devMode ? '' : 'none';
+
+  // Preview swipe handler
+  const previewStage = document.getElementById('previewStage');
+  previewStage.addEventListener('pointerdown', e => {
+    previewSwipeStartX = e.clientX;
+  });
+  previewStage.addEventListener('pointerup', async e => {
+    const dx = e.clientX - previewSwipeStartX;
+    if (Math.abs(dx) < 10) { closePreview(); return; } // tap = close
+    if (dx > 60 && previewIndex > 0) { previewIndex--; await renderPreviewImage(); }
+    if (dx < -60 && previewIndex < previewPages.length - 1) { previewIndex++; await renderPreviewImage(); }
+  });
+
+  // Service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const w = reg.installing;
+        w.addEventListener('statechange', () => {
+          if (w.state === 'installed' && navigator.serviceWorker.controller) {
+            document.getElementById('updateBanner').style.display = 'block';
+          }
+        });
+      });
+    });
+  }
+});
+// #endregion
+
+</script>
+</body>
+</html>
