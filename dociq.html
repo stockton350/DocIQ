@@ -407,6 +407,70 @@ body.onboarding-active .onboard-shell { display: flex; }
 @keyframes fadeUp     { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 /* #endregion */
 
+/* #region PROMPTIQ */
+#onboardTaskPanel.piq-open #onboardPrompt,
+#onboardTaskPanel.piq-open .onboard-help,
+#onboardTaskPanel.piq-open #onboardStyleSection,
+#onboardTaskPanel.piq-open .onboard-model-row,
+#onboardTaskPanel.piq-open .onboard-inline-actions,
+#onboardTaskPanel.piq-open .history-panel { display: none !important; }
+#piqOpenBtn.active { background: var(--teal-dim); border-color: var(--teal); color: var(--teal-light); }
+.piq-chat {
+  display: none; margin-top: 12px;
+  border: 0.5px solid var(--line); border-radius: var(--radius-md);
+  background: #111110; overflow: hidden;
+  animation: fadeUp 0.3s forwards;
+}
+#onboardTaskPanel.piq-open .piq-chat { display: flex; flex-direction: column; }
+.piq-messages {
+  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  max-height: 300px; overflow-y: auto;
+}
+.piq-bubble {
+  max-width: 88%; font-size: 13px; line-height: 1.7; padding: 10px 13px;
+  border-radius: var(--radius-md); white-space: pre-wrap;
+}
+.piq-bubble.assistant {
+  background: var(--surface); border: 0.5px solid var(--line);
+  color: var(--text); align-self: flex-start;
+}
+.piq-bubble.user {
+  background: var(--teal-dim); border: 0.5px solid var(--teal);
+  color: var(--teal-light); align-self: flex-end;
+}
+.piq-input-row { display: flex; border-top: 0.5px solid var(--line); }
+.piq-textarea {
+  flex: 1; background: transparent; border: none; outline: none;
+  padding: 10px 14px; font: inherit; font-size: 13px;
+  color: var(--text-bright); line-height: 1.6; resize: none; min-height: 52px;
+}
+.piq-send {
+  padding: 10px 16px; background: var(--teal-dim); color: var(--teal-light);
+  border: none; border-left: 0.5px solid var(--line);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: background 0.12s; white-space: nowrap;
+}
+.piq-send:hover { background: #0d6652; }
+.piq-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.piq-footer {
+  padding: 8px 12px; border-top: 0.5px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.piq-back-btn {
+  font-size: 11px; color: var(--text-faint); background: none; border: none;
+  cursor: pointer; padding: 0; transition: color 0.12s;
+}
+.piq-back-btn:hover { color: var(--text-dim); }
+.piq-use-btn {
+  font-size: 12px; padding: 7px 14px; font-weight: 500;
+  border-radius: var(--radius-pill); border: 0.5px solid var(--teal);
+  background: var(--teal-dim); color: var(--teal-light);
+  cursor: pointer; transition: background 0.12s;
+}
+.piq-use-btn:hover { background: #0d6652; }
+.piq-use-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* #endregion */
+
 /* #region HISTORY */
 .prompt-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .history-toggle-btn {
@@ -553,7 +617,10 @@ body.onboarding-active .onboard-shell { display: flex; }
       <div class="onboard-kicker">Step 2 — What to create</div>
       <div class="prompt-label-row">
         <h3 style="margin-bottom:0">What document should I write?</h3>
-        <button class="history-toggle-btn" onclick="toggleHistory()">Recent prompts</button>
+        <div style="display:flex;gap:6px">
+          <button class="history-toggle-btn" onclick="toggleHistory()">Recent prompts</button>
+          <button class="history-toggle-btn" id="piqOpenBtn" onclick="openPromptIQ()">PromptIQ ✦</button>
+        </div>
       </div>
       <div class="history-panel" id="historyPanel">
         <div class="history-header">Saved prompts</div>
@@ -563,7 +630,20 @@ body.onboarding-active .onboard-shell { display: flex; }
         placeholder="For example: Write a white paper explaining the research behind our leadership communication course. Follow the structure and tone of the sample white papers. Draw on the research articles to support the key benefits listed in the marketing copy. Audience is L&D managers at mid-size companies."></textarea>
       <div class="onboard-help">Be specific: document type, audience, which files to lean on most, length if you have a target.</div>
 
-      <div style="margin-top: 16px;">
+      <div id="piqChat" class="piq-chat">
+        <div id="piqMessages" class="piq-messages"></div>
+        <div class="piq-input-row">
+          <textarea id="piqInput" class="piq-textarea" placeholder="Type your reply…" rows="2"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPiq();}"></textarea>
+          <button id="piqSendBtn" class="piq-send" onclick="sendPiq()">Send</button>
+        </div>
+        <div class="piq-footer">
+          <button class="piq-back-btn" onclick="closePromptIQ()">← Write it myself</button>
+          <button id="piqUseBtn" class="piq-use-btn" style="display:none" onclick="usePiqPrompt()">Use this prompt →</button>
+        </div>
+      </div>
+
+      <div id="onboardStyleSection" style="margin-top: 16px;">
         <div class="onboard-kicker">Style & tone guidance (optional)</div>
         <textarea class="onboard-textarea" id="onboardStyle" style="min-height:72px"
           placeholder="e.g. Formal but accessible. Third person. No jargon. Approx. 1,200 words. Use section headers."></textarea>
@@ -1205,6 +1285,8 @@ function startOver() {
   if (isGenerating) return;
   uploadedFiles  = [];
   generatedText  = '';
+  piqMessages    = [];
+  closePromptIQ();
 
   document.body.classList.add('onboarding-active');
   document.getElementById('startOverBtn').style.display = 'none';
@@ -1443,6 +1525,220 @@ function updateKeyStatus(key) {
     el.className = 'key-status unset';
   } else {
     el.textContent = 'Key saved ✓'; el.className = 'key-status set';
+  }
+}
+// #endregion
+
+// #region PROMPTIQ
+const PIQ_SYSTEM = `You are PromptIQ, a document strategist conducting a needs analysis to produce a creative brief and a ready-to-use prompt for AI-assisted document generation.
+
+Your approach
+You conduct a focused conversational interview, one question at a time. You never present lists of questions or explain your process — you just ask. Each question builds on what you've learned. You probe when answers are vague, broad, contradictory, assumed, or interesting. You don't move to the next stage until you have something specific enough to act on. You adapt naturally to any document type and context.
+
+The flow
+Move through these stages in order, but let the conversation breathe. Follow up as many times as needed before moving on.
+1. The deliverable — what is it, where does it live, how is it used
+2. The outcome — what do you want the audience to think, feel, or do after engaging with it. This is the north star. Everything else serves it.
+3. The audience — who they are, what they already know, what would move them
+4. The substance — the core message and what supports it, filtered through the outcome
+5. The voice — tone, register, energy, what it should and shouldn't sound like. Push for specifics — "professional" is not enough
+6. The constraints — length, format, structure, mandatories, what to avoid
+7. Prior experience — what's worked before, what hasn't, what they want to do differently this time
+
+When you have enough
+Deliver three things:
+1. A structured creative brief written for a human — clear, specific, actionable. Specific enough that it could only be for this document. Include:
+   - Deliverable and context
+   - Outcome
+   - Audience — who they are and what they already know
+   - Core message and supporting substance
+   - Voice and tone — specific, not generic
+   - Constraints and format
+   - What to avoid
+
+2. A prompt written for DocIQ — ready to paste. Written to maximize the quality of AI output. Include:
+   - State the outcome first — what this document needs to accomplish
+   - Define the audience precisely — who they are, what they know, what would move them
+   - Specify the substance — what the core argument is and what supports it
+   - Define tone specifically — not just "professional" but register, energy, what it should feel like
+   - Set structure — sections, headers, flow, how it should be organized
+   - Set length precisely — word count or page count
+   - State what to avoid — as important as what to include
+   - Reference the uploaded materials explicitly — which ones set the style, which provide substance, which are supporting evidence
+   - End with the single most important thing — what the audience should walk away with
+
+3. A materials list
+Say: Before you head to DocIQ, gather your reference materials. Based on what you've told me, here's what to upload and what each one should do.`;
+
+let piqMessages = [];
+let piqStreaming = false;
+
+function openPromptIQ() {
+  piqMessages = [];
+  document.getElementById('piqMessages').innerHTML = '';
+  document.getElementById('piqUseBtn').style.display = 'none';
+  document.getElementById('onboardTaskPanel').classList.add('piq-open');
+  document.getElementById('piqOpenBtn').classList.add('active');
+  kickPiqConversation();
+}
+
+function closePromptIQ() {
+  document.getElementById('onboardTaskPanel').classList.remove('piq-open');
+  document.getElementById('piqOpenBtn').classList.remove('active');
+}
+
+async function kickPiqConversation() {
+  const ready = uploadedFiles.filter(f => f.status === 'ready');
+  const fileCtx = ready.length
+    ? ' The user has already uploaded these reference files: ' + ready.map(f => f.name).join(', ') + '.'
+    : '';
+  piqMessages.push({ role: 'user', content: 'Please begin the interview now.' + fileCtx });
+  await streamPiqResponse();
+}
+
+function addPiqBubble(role, text) {
+  const wrap = document.getElementById('piqMessages');
+  const div  = document.createElement('div');
+  div.className   = 'piq-bubble ' + role;
+  div.textContent = text;
+  wrap.appendChild(div);
+  wrap.scrollTop  = wrap.scrollHeight;
+  return div;
+}
+
+async function sendPiq() {
+  if (piqStreaming) return;
+  const input = document.getElementById('piqInput');
+  const text  = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addPiqBubble('user', text);
+  piqMessages.push({ role: 'user', content: text });
+  await streamPiqResponse();
+}
+
+async function streamPiqResponse() {
+  const apiKey = localStorage.getItem('dociq_api_key');
+  if (!apiKey) { openSettings(); return; }
+
+  piqStreaming = true;
+  document.getElementById('piqSendBtn').disabled = true;
+
+  const bubble = addPiqBubble('assistant', '');
+
+  try {
+    const resp = await fetch(API_URL, {
+      method:  'POST',
+      headers: {
+        'Content-Type':                              'application/json',
+        'x-api-key':                                 apiKey,
+        'anthropic-version':                         API_VERSION,
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model:      'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        stream:     true,
+        system:     PIQ_SYSTEM,
+        messages:   piqMessages
+      })
+    });
+
+    if (!resp.ok) {
+      bubble.textContent = resp.status === 401
+        ? 'API key rejected — check Settings.'
+        : 'Something went wrong (error ' + resp.status + ').';
+      piqStreaming = false;
+      document.getElementById('piqSendBtn').disabled = false;
+      return;
+    }
+
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let   buffer  = '';
+    let   full    = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const ev = JSON.parse(data);
+          if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+            full += ev.delta.text;
+            bubble.textContent = full;
+            const wrap = document.getElementById('piqMessages');
+            wrap.scrollTop = wrap.scrollHeight;
+          }
+        } catch(e) {}
+      }
+    }
+
+    piqMessages.push({ role: 'assistant', content: full });
+
+    if (full.includes('Before you head to DocIQ')) {
+      document.getElementById('piqUseBtn').style.display = '';
+    }
+
+  } catch(e) {
+    bubble.textContent = 'Network error — try again.';
+  }
+
+  piqStreaming = false;
+  document.getElementById('piqSendBtn').disabled = false;
+  document.getElementById('piqInput').focus();
+}
+
+async function usePiqPrompt() {
+  const apiKey = localStorage.getItem('dociq_api_key');
+  if (!apiKey) { openSettings(); return; }
+
+  const btn = document.getElementById('piqUseBtn');
+  btn.textContent = 'Loading…';
+  btn.disabled    = true;
+
+  const extractMsgs = [
+    ...piqMessages,
+    { role: 'user', content: 'Give me only the DocIQ prompt you wrote (deliverable 2). Complete text, ready to paste. No label, no preamble, nothing else.' }
+  ];
+
+  try {
+    const resp = await fetch(API_URL, {
+      method:  'POST',
+      headers: {
+        'Content-Type':                              'application/json',
+        'x-api-key':                                 apiKey,
+        'anthropic-version':                         API_VERSION,
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model:    'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system:   PIQ_SYSTEM,
+        messages: extractMsgs
+      })
+    });
+
+    const data       = await resp.json();
+    const promptText = data.content?.[0]?.text?.trim() || '';
+
+    if (promptText) {
+      document.getElementById('onboardPrompt').value = promptText;
+      closePromptIQ();
+      showToast('Prompt loaded ✓');
+    } else {
+      btn.textContent = 'Use this prompt →';
+      btn.disabled    = false;
+    }
+  } catch(e) {
+    btn.textContent = 'Use this prompt →';
+    btn.disabled    = false;
   }
 }
 // #endregion
